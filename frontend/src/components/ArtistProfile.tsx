@@ -23,7 +23,7 @@ const ArtistProfile = ({ artist }: ArtistProfileProps) => {
                         3. Separate the avatar and baclground image
                         
                     */}
-                    <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-black shrink-0">
+                    <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white shrink-0">
                         <img 
                             src={artist.profilePicture || 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=150&h=150'}
                             alt={artist.name} 

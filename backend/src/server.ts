@@ -18,7 +18,7 @@ app.use('/api/artists', artistRoutes);
 app.get('/api/health', (req: Request, res: Response) => {
     res.json({ 
         status: 'ok', 
-        message: 'Artist Location Map API is running',
+        message: 'running',
         timestamp: new Date().toISOString()
     });
 });

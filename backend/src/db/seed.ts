@@ -41,6 +41,46 @@ const sampleArtists: CreateArtistDTO[] = [
     }
 ];
 
+// Generate dummy artists
+const tokyoCoords = { lat: 35.6762, lng: 139.6503 };
+const kawasakiCoords = { lat: 35.5308, lng: 139.7029 };
+
+for (let i = 1; i <= 15; i++) {
+    sampleArtists.push({
+        name: `Tokyo Artist ${i}`,
+        profilePicture: undefined,
+        originalLocation: {
+            city: "Tokyo",
+            province: "Tokyo",
+            coordinates: tokyoCoords
+        },
+        activeLocation: {
+            city: "Tokyo",
+            province: "Tokyo",
+            coordinates: tokyoCoords
+        },
+        socialLinks: {}
+    });
+}
+
+for (let i = 1; i <= 15; i++) {
+    sampleArtists.push({
+        name: `Kawasaki Artist ${i}`,
+        profilePicture: undefined,
+        originalLocation: {
+            city: "Kawasaki",
+            province: "Kanagawa",
+            coordinates: kawasakiCoords
+        },
+        activeLocation: {
+            city: "Kawasaki",
+            province: "Kanagawa",
+            coordinates: kawasakiCoords
+        },
+        socialLinks: {}
+    });
+}
+
 async function seedDatabase() {
     try {
         console.log('Starting database seed...');
