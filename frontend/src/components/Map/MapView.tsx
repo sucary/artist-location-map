@@ -4,7 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import type { LatLngExpression } from 'leaflet';
 import { getArtists } from '../../services/api';
 import type { Artist } from '../../types/artist';
-import { getExplodedCoordinates } from '../../utils/mapUtils';
+import { getDisplayArtists } from '../../utils/mapUtils';
 import LocateControl from './LocateMeButton';
 import ArtistCluster from './ArtistCluster';
 
@@ -12,7 +12,6 @@ const MapView = () => {
     const defaultCenter: LatLngExpression = [35.6762, 139.6503]; // Tokyo
     const defaultZoom = 4;
     const [artists, setArtists] = useState<Artist[]>([]);
-    const [currentZoom, setCurrentZoom] = useState(defaultZoom);
 
     useEffect(() => {
         const fetchArtists = async () => {
@@ -27,7 +26,7 @@ const MapView = () => {
         fetchArtists();
     }, []);
 
-    const explodedArtists = useMemo(() => getExplodedCoordinates(artists, currentZoom), [artists, currentZoom]);
+    const displayArtists = useMemo(() => getDisplayArtists(artists), [artists]);
 
     return (
         <MapContainer
@@ -36,34 +35,16 @@ const MapView = () => {
             className="h-full w-full"
             zoomControl={false}
         >
-            <ZoomHandler onZoomChange={setCurrentZoom} />
             <ZoomControl position="bottomright" />
             <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             <LocateControl />
-            <ArtistCluster artists={explodedArtists} />
+            <ArtistCluster artists={displayArtists} />
         </MapContainer>
     );
 };
 
-// Helper component to listen to zoom events
-const ZoomHandler = ({ onZoomChange }: { onZoomChange: (zoom: number) => void }) => {
-    const map = useMap();
-    
-    useEffect(() => {
-        const handler = () => {
-            onZoomChange(map.getZoom());
-        };
-        
-        map.on('zoomend', handler);
-        return () => {
-            map.off('zoomend', handler);
-        };
-    }, [map, onZoomChange]);
-    
-    return null;
-};
 
 export default MapView;

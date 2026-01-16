@@ -1,4 +1,4 @@
-import { ArtistStore } from '../models/artistStore';
+import { ArtistService } from '../services/artistService';
 import pool from '../config/database';
 import { CreateArtistDTO } from '../types/artist';
 
@@ -41,9 +41,12 @@ const sampleArtists: CreateArtistDTO[] = [
     }
 ];
 
-// Generate dummy artists
-const tokyoCoords = { lat: 35.6762, lng: 139.6503 };
-const kawasakiCoords = { lat: 35.5308, lng: 139.7029 };
+/* 
+/ Generate dummy artists
+/ Note: Coordinates are placeholders (0,0). 
+/ The backend will replace them with the official city center.
+*/
+const dummyCoords = { lat: 0, lng: 0 };
 
 for (let i = 1; i <= 15; i++) {
     sampleArtists.push({
@@ -52,12 +55,12 @@ for (let i = 1; i <= 15; i++) {
         originalLocation: {
             city: "Tokyo",
             province: "Tokyo",
-            coordinates: tokyoCoords
+            coordinates: dummyCoords
         },
         activeLocation: {
             city: "Tokyo",
             province: "Tokyo",
-            coordinates: tokyoCoords
+            coordinates: dummyCoords
         },
         socialLinks: {}
     });
@@ -70,37 +73,41 @@ for (let i = 1; i <= 15; i++) {
         originalLocation: {
             city: "Kawasaki",
             province: "Kanagawa",
-            coordinates: kawasakiCoords
+            coordinates: dummyCoords
         },
         activeLocation: {
             city: "Kawasaki",
             province: "Kanagawa",
-            coordinates: kawasakiCoords
+            coordinates: dummyCoords
         },
         socialLinks: {}
     });
 }
 
 async function seedDatabase() {
-    try {
-        console.log('Starting database seed...');
-        
-        // Clear existing data
-        await pool.query('DELETE FROM artists');
-        console.log('Cleared existing artists');
+try {
+    console.log('Starting database seed...');
+    
+    // Clear existing data
+    await pool.query('DELETE FROM artists');
+    console.log('Cleared existing artists');
 
-        // Insert new artists
-        for (const artist of sampleArtists) {
-            await ArtistStore.create(artist);
+    // Insert new artists
+    for (const artist of sampleArtists) {
+        try {
+            await ArtistService.create(artist);
             console.log(`Created artist: ${artist.name}`);
+        } catch (err) {
+            console.error(`Failed to create artist ${artist.name}:`, err);
         }
-
-        console.log('Database seeded successfully!');
-        process.exit(0);
-    } catch (error) {
-        console.error('Error seeding database:', error);
-        process.exit(1);
     }
+
+    console.log('Database seeded successfully!');
+    process.exit(0);
+} catch (error) {
+    console.error('Error seeding database:', error);
+    process.exit(1);
+}
 }
 
 seedDatabase();

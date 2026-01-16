@@ -23,17 +23,22 @@ export const ArtistService = {
             data.activeLocation.province
         );
 
-        // 2. Generate random display coordinates for both locations
-        // Fallback to the provided center if generation fails
+        // 2. Enforce Nominatim city centers
+        // Overwrite the provided coordinates with Nominatim coordinates
+        data.originalLocation.coordinates = originalCity.center;
+        data.activeLocation.coordinates = activeCity.center;
+
+        // 3. Generate random display coordinates for both locations
+        // Fallback to the official center if generation fails
         const [originalRandomPoint, activeRandomPoint] = await Promise.all([
             CityService.generateRandomPoint(originalCity.id),
             CityService.generateRandomPoint(activeCity.id)
         ]);
 
-        const originalDisplayCoordinates = originalRandomPoint || data.originalLocation.coordinates;
-        const activeDisplayCoordinates = activeRandomPoint || data.activeLocation.coordinates;
+        const originalDisplayCoordinates = originalRandomPoint || originalCity.center;
+        const activeDisplayCoordinates = activeRandomPoint || activeCity.center;
 
-        // 3. Prepare data for Store
+        // 4. Prepare data for Store
         const storeData: StoreArtistDTO = {
             ...data,
             originalCityId: originalCity.id,
@@ -42,7 +47,7 @@ export const ArtistService = {
             activeLocationDisplayCoordinates: activeDisplayCoordinates
         };
 
-        // 4. Create artist
+        // 5. Create artist
         return await ArtistStore.create(storeData);
     },
 

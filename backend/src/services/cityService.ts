@@ -172,8 +172,8 @@ export const CityService = {
     generateRandomPoint: async (cityId: string): Promise<{lat: number, lng: number} | null> => {
         const result = await pool.query(`
             SELECT
-                ST_Y(ST_PointN(point, 1)::geometry) as lat,
-                ST_X(ST_PointN(point, 1)::geometry) as lng
+                ST_Y(ST_GeometryN(point, 1)) as lat,
+                ST_X(ST_GeometryN(point, 1)) as lng
             FROM (
                 SELECT ST_GeneratePoints(boundary::geometry, 1) as point
                 FROM city_boundaries

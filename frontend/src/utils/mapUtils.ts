@@ -35,40 +35,12 @@ export const createArtistMarker = (artist: Artist) => {
   });
 };
 
-export const getExplodedCoordinates = (artists: Artist[], zoomLevel: number = 13) => {
-    // Explode overlapping coordinates based on zoom level
-    // formula: baseOffset / (2 ^ (currentZoom - baseZoom))
-    
-    const baseZoom = 13;
-    const baseOffset = 0.0002;
-    const scaleFactor = Math.pow(2, zoomLevel - baseZoom);
-    const offset = baseOffset / scaleFactor;
-
-    const grouped: Record<string, Artist[]> = {};
-  
-    // Group artists by exact location
-    artists.forEach(a => {
-      const key = `${a.activeLocation.coordinates.lat},${a.activeLocation.coordinates.lng}`;
-      if (!grouped[key]) grouped[key] = [];
-      grouped[key].push(a);
-    });
-  
-    // Apply offsets
-    return Object.values(grouped).flatMap(group => {
-      if (group.length === 1) return group;
-  
-      return group.map((artist, index) => {
-        const angle = (index / group.length) * 2 * Math.PI;
-        return {
-          ...artist,
-          activeLocation: {
+export const getDisplayArtists = (artists: Artist[]) => {
+    return artists.map(artist => ({
+        ...artist,
+        activeLocation: {
             ...artist.activeLocation,
-            coordinates: {
-              lat: artist.activeLocation.coordinates.lat + Math.cos(angle) * offset,
-              lng: artist.activeLocation.coordinates.lng + Math.sin(angle) * offset,
-            }
-          }
-        };
-      });
-    });
-  };
+            coordinates: artist.activeLocationDisplayCoordinates
+        }
+    }));
+};

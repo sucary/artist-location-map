@@ -1,6 +1,10 @@
 -- Enable PostGIS extension
 CREATE EXTENSION IF NOT EXISTS postgis;
 
+-- Drop tables if they exist
+DROP TABLE IF EXISTS artists;
+DROP TABLE IF EXISTS city_boundaries;
+
 -- Auto-update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
