@@ -2,9 +2,12 @@ import { useState, useEffect } from 'react';
 import './App.css';
 import { checkHealth } from './services/api';
 import MapView from './components/Map/MapView';
+import ArtistForm from './components/ArtistForm';
+import AddArtistButton from './components/Map/buttons/AddArtistButton';
 
 function App() {
     const [status, setStatus] = useState<string>('Checking connection...');
+    const [showForm, setShowForm] = useState(false);
 
     useEffect(() => {
         let mounted = true;
@@ -40,13 +43,15 @@ function App() {
 
     return (
         <div className="h-screen w-screen flex flex-col">
-            <div className="absolute top-2 right-2 z-[1000] bg-white p-2 rounded-md shadow-md">
+            <div className="absolute top-2 left-2 z-[1000] bg-white p-2 rounded-md shadow-md">
                 <div className="text-xs">
                     Backend: <span className={`font-bold ${status.includes('running') ? 'text-green-600' : 'text-red-600'}`}>
                         {status}
                     </span>
                 </div>
             </div>
+            {!showForm && <AddArtistButton onClick={() => setShowForm(true)} />}
+            {showForm && <ArtistForm onCancel={() => setShowForm(false)} />}
             <MapView />
         </div>
     );

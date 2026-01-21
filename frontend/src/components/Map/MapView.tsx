@@ -5,9 +5,9 @@ import type { LatLngExpression } from 'leaflet';
 import { getArtists } from '../../services/api';
 import type { Artist, LocationView } from '../../types/artist';
 import { getDisplayArtists } from '../../utils/mapUtils';
-import LocateControl from './LocateMeButton';
+import LocateControl from './buttons/LocateMeButton';
 import ArtistCluster from './ArtistCluster';
-import ViewToggleButton from './ViewToggleButton';
+import ViewToggleButton from './buttons/ViewToggleButton';
 import { useQuery } from '@tanstack/react-query';
 
 const MapView = () => {

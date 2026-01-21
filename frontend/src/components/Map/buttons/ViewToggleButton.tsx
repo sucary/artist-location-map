@@ -1,4 +1,4 @@
-import type { LocationView } from '../../types/artist';
+import type { LocationView } from '../../../types/artist';
 
 const ViewToggleButton = ({ view, setView }: { view: LocationView ; setView: (view: LocationView) => void }) => {
     const toggleView = () => {

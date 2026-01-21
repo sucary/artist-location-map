@@ -42,3 +42,9 @@ export const XIcon: React.FC<IconProps> = ({ className = "w-5 h-5" }) => (
         <path d="M3.75714 0.5C4.064 0.5 4.35386 0.640881 4.54345 0.882161L8.88477 6.40723L14.5056 0.787392C14.5958 0.697169 14.7182 0.646484 14.8458 0.646484C15.2734 0.646484 15.4886 1.1626 15.1876 1.46636L9.50684 7.19922L14.7573 13.8822C15.2728 14.5383 14.8054 15.5 13.971 15.5H12.2428C11.936 15.5 11.6461 15.3591 11.4566 15.1179L7.11719 9.5957L1.65919 15.3327C1.55754 15.4395 1.41652 15.5 1.26905 15.5H0.92338C0.577551 15.5 0.401306 15.0846 0.641602 14.8359L6.49414 8.80273L1.24255 2.11775C0.727104 1.46161 1.19453 0.5 2.02893 0.5H3.75714ZM12.2432 14.5H13.9707L3.75684 1.5H2.0293L12.2432 14.5Z" fill="currentColor" stroke="currentColor" strokeWidth="0.25"/>
     </svg>
 );
+
+export const ChevronDownIcon: React.FC<IconProps> = ({ className = "w-5 h-5" }) => (
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+        <path d="M6 9L12 15L18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+);
