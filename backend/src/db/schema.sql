@@ -32,6 +32,14 @@ CREATE TABLE IF NOT EXISTS city_boundaries (
   CONSTRAINT uq_city_province UNIQUE (name, province)
 );
 
+-- Water Polygons table
+CREATE TABLE IF NOT EXISTS water_polygons (
+    gid SERIAL PRIMARY KEY,
+    geom GEOGRAPHY(MULTIPOLYGON, 4326)
+);
+
+CREATE INDEX IF NOT EXISTS idx_water_polygons_geom ON water_polygons USING GIST(geom);
+
 -- Artists table
 CREATE TABLE IF NOT EXISTS artists (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

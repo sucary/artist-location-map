@@ -151,9 +151,63 @@ export const CityService = {
                 data.osm_id
             ]);
 
+            // Remove ocean areas and recalculate center
+            const cityId = result.rows[0].id;
+            
+            await client.query(`
+                UPDATE city_boundaries
+                SET
+                    boundary = COALESCE(
+                        ST_Difference(
+                            boundary::geometry,
+                            (
+                                SELECT ST_Union(geom::geometry)
+                                FROM water_polygons
+                                WHERE ST_Intersects(city_boundaries.boundary::geometry, water_polygons.geom::geometry)
+                            )
+                        )::geography,
+                        boundary
+                    ),
+                    -- Recalculate center to ensure it is on land
+                    center = CASE
+                        WHEN (
+                            SELECT COUNT(*)
+                            FROM water_polygons
+                            WHERE ST_Intersects(city_boundaries.boundary::geometry, water_polygons.geom::geometry)
+                        ) > 0
+                        THEN ST_PointOnSurface(
+                            COALESCE(
+                                ST_Difference(
+                                    boundary::geometry,
+                                    (
+                                        SELECT ST_Union(geom::geometry)
+                                        FROM water_polygons
+                                        WHERE ST_Intersects(city_boundaries.boundary::geometry, water_polygons.geom::geometry)
+                                    )
+                                ),
+                                boundary::geometry
+                            )
+                        )::geography
+                        ELSE center -- Keep original center if no water intersection
+                    END
+                WHERE id = $1
+            `, [cityId]);
+
+            // Fetch the updated city data
+            const updatedResult = await client.query(`
+                SELECT
+                    id, name, province, country,
+                    ST_AsGeoJSON(boundary)::json as boundary,
+                    ST_Y(center::geometry) as lat,
+                    ST_X(center::geometry) as lng,
+                    osm_id, last_updated, needs_refresh
+                FROM city_boundaries
+                WHERE id = $1
+            `, [cityId]);
+
             await client.query('COMMIT');
 
-            const row = result.rows[0];
+            const row = updatedResult.rows[0];
             return {
                 id: row.id,
                 name: row.name,

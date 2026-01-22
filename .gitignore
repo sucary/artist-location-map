@@ -53,6 +53,9 @@ plans/
 backend/dist/
 backend/coverage/
 
+# Data
+backend/data/
+
 # Frontend specific
 frontend/dist/
 frontend/coverage/
