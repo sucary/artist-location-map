@@ -1,9 +1,12 @@
 -- Enable PostGIS extension
 CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- Drop tables if they exist
 DROP TABLE IF EXISTS artists;
 DROP TABLE IF EXISTS city_boundaries;
+DROP TABLE IF EXISTS priority_locations;
+DROP TABLE IF EXISTS water_polygons;
 
 -- Auto-update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -20,25 +23,44 @@ CREATE TABLE IF NOT EXISTS city_boundaries (
   name VARCHAR(100) NOT NULL,
   province VARCHAR(100) NOT NULL,
   country VARCHAR(100),
-  
+
   boundary GEOGRAPHY(MULTIPOLYGON, 4326) NOT NULL,
+  raw_boundary GEOGRAPHY(MULTIPOLYGON, 4326),
   center GEOGRAPHY(POINT, 4326) NOT NULL,
-  
-  osm_id BIGINT UNIQUE,
+
+  osm_id BIGINT NOT NULL,
+  osm_type VARCHAR(20) NOT NULL,
+  display_name TEXT,
+  type VARCHAR(50),
+  class VARCHAR(50),
+  importance DECIMAL(5,4),
+  bounding_box DECIMAL[4],
+  address_components JSONB,
+
+  -- Metadata
   last_updated TIMESTAMP DEFAULT NOW(),
   needs_refresh BOOLEAN DEFAULT FALSE,
 
-  -- Duplication check
-  CONSTRAINT uq_city_province UNIQUE (name, province)
+  CONSTRAINT uq_city_province UNIQUE (name, province),
+  CONSTRAINT uq_city_osm UNIQUE (osm_id, osm_type)
+);
+
+-- Priority locations for search boosting
+CREATE TABLE IF NOT EXISTS priority_locations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  search_query VARCHAR(100) NOT NULL,
+  osm_id BIGINT NOT NULL,
+  osm_type VARCHAR(20) NOT NULL,
+  display_name TEXT NOT NULL,
+  rank INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT NOW()
 );
 
 -- Water Polygons table
 CREATE TABLE IF NOT EXISTS water_polygons (
-    gid SERIAL PRIMARY KEY,
-    geom GEOGRAPHY(MULTIPOLYGON, 4326)
+  gid SERIAL PRIMARY KEY,
+  geom GEOGRAPHY(MULTIPOLYGON, 4326)
 );
-
-CREATE INDEX IF NOT EXISTS idx_water_polygons_geom ON water_polygons USING GIST(geom);
 
 -- Artists table
 CREATE TABLE IF NOT EXISTS artists (
@@ -69,7 +91,17 @@ CREATE TABLE IF NOT EXISTS artists (
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Indexes for performance
+-- Indexes for city_boundaries
+CREATE INDEX IF NOT EXISTS idx_city_boundaries_boundary ON city_boundaries USING GIST(boundary);
+CREATE INDEX IF NOT EXISTS idx_city_boundaries_raw_boundary ON city_boundaries USING GIST(raw_boundary);
+CREATE INDEX IF NOT EXISTS idx_city_name_trgm ON city_boundaries USING gin(name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_city_display_name_trgm ON city_boundaries USING gin(display_name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_city_importance ON city_boundaries(importance DESC);
+
+CREATE INDEX IF NOT EXISTS idx_priority_search_query ON priority_locations(search_query);
+CREATE INDEX IF NOT EXISTS idx_water_polygons_geom ON water_polygons USING GIST(geom);
+
+-- Indexes for artists
 CREATE INDEX IF NOT EXISTS idx_artists_original_coords ON artists USING GIST(original_coordinates);
 CREATE INDEX IF NOT EXISTS idx_artists_active_coords ON artists USING GIST(active_coordinates);
 CREATE INDEX IF NOT EXISTS idx_artists_original_display_coords ON artists USING GIST(original_display_coordinates);
@@ -80,10 +112,14 @@ CREATE INDEX IF NOT EXISTS idx_artists_active_city ON artists(active_city);
 CREATE INDEX IF NOT EXISTS idx_artists_original_city_id ON artists(original_city_id);
 CREATE INDEX IF NOT EXISTS idx_artists_active_city_id ON artists(active_city_id);
 
-CREATE INDEX IF NOT EXISTS idx_city_boundaries_boundary ON city_boundaries USING GIST(boundary);
-
 -- Trigger to automatically update updated_at
 CREATE TRIGGER update_artists_updated_at
   BEFORE UPDATE ON artists
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
+-- Seed priority locations
+INSERT INTO priority_locations (search_query, osm_id, osm_type, display_name, rank) VALUES
+  ('tokyo', 7515426, 'relation', 'Tokyo 23 wards, Tokyo, Japan', 0),
+  ('new york', 175905, 'relation', 'New York, New York, USA', 0)
+ON CONFLICT DO NOTHING;
