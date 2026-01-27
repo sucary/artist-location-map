@@ -17,7 +17,7 @@ export interface City {
         coordinates: number[][][][] | number[][][];
     };
     center: Coordinates;
-    osmId: string;
+    osmId: number;
     lastUpdated: Date | string;
     needsRefresh: boolean;
 }

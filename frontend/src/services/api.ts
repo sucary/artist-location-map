@@ -41,4 +41,61 @@ export const getCityById = async (id: string): Promise<City> => {
     }
 };
 
+export interface SearchResult {
+    id?: string;
+    displayName: string;
+    name: string;
+    province: string;
+    country: string;
+    center: { lat: number; lng: number };
+    osmId: number;
+    osmType: string;
+    type?: string;
+    importance?: number;
+    isPriority?: boolean;
+}
+
+export interface SearchResponse {
+    results: SearchResult[];
+    source: 'local' | 'nominatim';
+    hasMore?: boolean;
+}
+
+// Search cities in local database
+export const searchCities = async (query: string, limit: number = 20): Promise<SearchResponse> => {
+    try {
+        const response = await api.get<SearchResponse>('/cities/search', {
+            params: { q: query, limit }
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Failed to search cities:', error);
+        throw error;
+    }
+};
+
+// Search cities via Nominatim API
+export const searchCitiesNominatim = async (query: string, limit: number = 20): Promise<SearchResponse> => {
+    try {
+        const response = await api.get<SearchResponse>('/cities/search/nominatim', {
+            params: { q: query, limit }
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Failed to search cities via Nominatim:', error);
+        throw error;
+    }
+};
+
+// Reverse geocode coordinates to city
+export const reverseGeocode = async (lat: number, lng: number): Promise<SearchResult> => {
+    try {
+        const response = await api.post<SearchResult>('/cities/reverse', { lat, lng });
+        return response.data;
+    } catch (error) {
+        console.error('Failed to reverse geocode:', error);
+        throw error;
+    }
+};
+
 export default api;
