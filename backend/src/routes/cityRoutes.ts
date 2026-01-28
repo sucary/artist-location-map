@@ -57,18 +57,35 @@ router.get('/search/nominatim', searchLimiter, asyncHandler(async (req, res) => 
 
 router.post('/reverse', searchLimiter, asyncHandler(async (req, res) => {
     const { lat, lng } = req.body;
+    const withBoundary = req.query.withBoundary === 'true';
 
     if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
         throw new AppError('Valid lat and lng required', 400);
     }
 
-    const city = await CityService.reverseGeocode(
+    let city = await CityService.reverseGeocode(
         parseFloat(lat),
         parseFloat(lng)
     );
 
     if (!city) {
         throw new AppError('No city found at these coordinates', 404);
+    }
+
+    // If boundary requested and city not fully stored in DB, fetch and save
+    if (withBoundary && !city.id) {
+        // City was found via Nominatim reverse but not in DB
+        // Fetch full data with boundary and save
+        const nominatimData = await CityService.fetchByOsmId(city.osmId, city.osmType);
+        if (nominatimData) {
+            city = await CityService.saveFromNominatim(nominatimData);
+        }
+    } else if (withBoundary && city.id && !city.boundary) {
+        // City exists in DB but boundary not loaded, fetch full data
+        const fullCity = await CityService.getById(city.id);
+        if (fullCity) {
+            city = fullCity;
+        }
     }
 
     res.json(city);

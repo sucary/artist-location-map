@@ -64,30 +64,37 @@ export const ArtistService = {
             );
         }
 
-        // 3. Enforce Nominatim city centers
-        // Overwrite the provided coordinates with Nominatim coordinates
-        data.originalLocation.coordinates = originalCity.center;
-        data.activeLocation.coordinates = activeCity.center;
+        // 3. Determine if coordinates were manually selected
+        // If provided coordinates differ from city center, they were manually selected
+        const originalIsManualSelection = data.originalLocation.coordinates &&
+            (Math.abs(data.originalLocation.coordinates.lat - originalCity.center.lat) > 0.0001 ||
+             Math.abs(data.originalLocation.coordinates.lng - originalCity.center.lng) > 0.0001);
 
-        // 4. Generate random display coordinates for both locations
-        // - If both cities are the same, use the same random point
-        // Fallback to the official center if generation fails
+        const activeIsManualSelection = data.activeLocation.coordinates &&
+            (Math.abs(data.activeLocation.coordinates.lat - activeCity.center.lat) > 0.0001 ||
+             Math.abs(data.activeLocation.coordinates.lng - activeCity.center.lng) > 0.0001);
+
+        // 4. Set coordinates and display coordinates based on selection method
         let originalDisplayCoordinates, activeDisplayCoordinates;
 
-        if (originalCity.id === activeCity.id) {
-            // Same city - use one random point for both
-            const randomPoint = await CityService.generateRandomPoint(originalCity.id);
-            const displayCoord = randomPoint || originalCity.center;
-            originalDisplayCoordinates = displayCoord;
-            activeDisplayCoordinates = displayCoord;
+        if (originalIsManualSelection) {
+            // Manual selection
+            originalDisplayCoordinates = data.originalLocation.coordinates;
         } else {
-            // Different cities - generate separate random points
-            const [originalRandomPoint, activeRandomPoint] = await Promise.all([
-                CityService.generateRandomPoint(originalCity.id),
-                CityService.generateRandomPoint(activeCity.id)
-            ]);
-            originalDisplayCoordinates = originalRandomPoint || originalCity.center;
-            activeDisplayCoordinates = activeRandomPoint || activeCity.center;
+            // Search-based selection
+            data.originalLocation.coordinates = originalCity.center;
+            const randomPoint = await CityService.generateRandomPoint(originalCity.id);
+            originalDisplayCoordinates = randomPoint || originalCity.center;
+        }
+
+        if (activeIsManualSelection) {
+            // Manual selection
+            activeDisplayCoordinates = data.activeLocation.coordinates;
+        } else {
+            // Search-based selection
+            data.activeLocation.coordinates = activeCity.center;
+            const randomPoint = await CityService.generateRandomPoint(activeCity.id);
+            activeDisplayCoordinates = randomPoint || activeCity.center;
         }
 
         // 5. Prepare data for Store
@@ -116,6 +123,8 @@ export const ArtistService = {
         let finalActiveCityId = currentArtist.activeCityId;
 
         // If locations are being updated, resolve new IDs
+        let originalCity, activeCity;
+
         if (data.originalLocation) {
             let city;
             if (data.originalLocation.osmId && data.originalLocation.osmType) {
@@ -141,6 +150,7 @@ export const ArtistService = {
                     data.originalLocation.province
                 );
             }
+            originalCity = city;
             storeData.originalCityId = city.id;
             finalOriginalCityId = city.id;
         }
@@ -170,40 +180,44 @@ export const ArtistService = {
                     data.activeLocation.province
                 );
             }
+            activeCity = city;
             storeData.activeCityId = city.id;
             finalActiveCityId = city.id;
         }
 
-        // Check if final state has both cities the same
-        if (finalOriginalCityId === finalActiveCityId) {
-            // Same city - use the same random point for both to prevent "jumping"
-            const randomPoint = await CityService.generateRandomPoint(finalOriginalCityId);
-            const displayCoord = randomPoint || (data.originalLocation?.coordinates || data.activeLocation?.coordinates);
+        // Determine if coordinates were manually selected for updated locations
+        const originalIsManualSelection = data.originalLocation && originalCity &&
+            data.originalLocation.coordinates &&
+            (Math.abs(data.originalLocation.coordinates.lat - originalCity.center.lat) > 0.0001 ||
+             Math.abs(data.originalLocation.coordinates.lng - originalCity.center.lng) > 0.0001);
 
-            // Only update the coordinates that were modified
-            if (data.originalLocation) {
-                storeData.originalLocationDisplayCoordinates = displayCoord;
-            }
-            if (data.activeLocation) {
-                storeData.activeLocationDisplayCoordinates = displayCoord;
-            }
+        const activeIsManualSelection = data.activeLocation && activeCity &&
+            data.activeLocation.coordinates &&
+            (Math.abs(data.activeLocation.coordinates.lat - activeCity.center.lat) > 0.0001 ||
+             Math.abs(data.activeLocation.coordinates.lng - activeCity.center.lng) > 0.0001);
 
-            // If one location was updated to match the other, update both display coords
-            if (data.originalLocation && !data.activeLocation) {
-                storeData.activeLocationDisplayCoordinates = displayCoord;
-            } else if (data.activeLocation && !data.originalLocation) {
-                storeData.originalLocationDisplayCoordinates = displayCoord;
-            }
-        } else {
-            // Different cities - generate separate random points for the new city
-            if (data.originalLocation) {
+        // Handle display coordinates based on selection method
+        if (data.originalLocation) {
+            if (originalIsManualSelection) {
+                // Manual selection
+                storeData.originalLocationDisplayCoordinates = data.originalLocation.coordinates;
+            } else {
+                // Search-based selection
+                data.originalLocation.coordinates = originalCity!.center;
                 const randomPoint = await CityService.generateRandomPoint(finalOriginalCityId);
-                storeData.originalLocationDisplayCoordinates = randomPoint || data.originalLocation.coordinates;
+                storeData.originalLocationDisplayCoordinates = randomPoint || originalCity!.center;
             }
+        }
 
-            if (data.activeLocation) {
+        if (data.activeLocation) {
+            if (activeIsManualSelection) {
+                // Manual selection
+                storeData.activeLocationDisplayCoordinates = data.activeLocation.coordinates;
+            } else {
+                // Search-based selection
+                data.activeLocation.coordinates = activeCity!.center;
                 const randomPoint = await CityService.generateRandomPoint(finalActiveCityId);
-                storeData.activeLocationDisplayCoordinates = randomPoint || data.activeLocation.coordinates;
+                storeData.activeLocationDisplayCoordinates = randomPoint || activeCity!.center;
             }
         }
 
