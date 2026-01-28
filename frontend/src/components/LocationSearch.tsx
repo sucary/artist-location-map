@@ -5,14 +5,14 @@ import { searchCities, searchCitiesNominatim, type SearchResult } from '../servi
 import { useDebounce } from '../hooks/useDebounce';
 
 interface LocationSearchProps {
-    displayValue: string; 
+    displayValue?: string;
     onChange: (result: SearchResult) => void;
     onManualPin: () => void;
     placeholder?: string;
     label?: string;
 }
 
-export const LocationSearch = ({ displayValue, onChange, onManualPin, placeholder, label }: LocationSearchProps) => {
+export const LocationSearch = ({ displayValue = '', onChange, onManualPin, placeholder, label }: LocationSearchProps) => {
     const [query, setQuery] = useState<string | null>(null);
     const [results, setResults] = useState<SearchResult[]>([]);
     const [isOpen, setIsOpen] = useState(false);

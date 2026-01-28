@@ -98,4 +98,26 @@ export const reverseGeocode = async (lat: number, lng: number): Promise<SearchRe
     }
 };
 
+// Create a new artist
+export const createArtist = async (artistData: Partial<Artist>): Promise<Artist> => {
+    try {
+        const response = await api.post<Artist>('/artists', artistData);
+        return response.data;
+    } catch (error) {
+        console.error('Failed to create artist:', error);
+        throw error;
+    }
+};
+
+// Update an existing artist
+export const updateArtist = async (id: string, artistData: Partial<Artist>): Promise<Artist> => {
+    try {
+        const response = await api.put<Artist>(`/artists/${id}`, artistData);
+        return response.data;
+    } catch (error) {
+        console.error('Failed to update artist:', error);
+        throw error;
+    }
+};
+
 export default api;

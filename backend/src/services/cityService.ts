@@ -137,7 +137,8 @@ export const CityService = {
             format: 'json',
             addressdetails: '1',
             limit: String(limit),
-            polygon_geojson: '0'
+            polygon_geojson: '0',
+            dedupe: '0'
         });
 
         const url = `https://nominatim.openstreetmap.org/search?${params.toString()}`;
@@ -152,6 +153,10 @@ export const CityService = {
             }
 
             const data = await response.json() as NominatimResponse[];
+
+            console.log(`Nominatim search for "${query}" returned ${data.length} results`);
+            console.log('Nominatim URL:', url);
+            data.forEach((item, i) => console.log(`  ${i + 1}. ${item.display_name} (${item.type})`));
 
             return data.map(item => ({
                 displayName: item.display_name,
@@ -279,16 +284,98 @@ export const CityService = {
     },
 
     /**
+     * Fetch a city with its polygon boundary from Nominatim
+     */
+    fetchCityWithBoundary: async (cityName: string, province: string, country: string): Promise<NominatimResponse | null> => {
+        const query = [cityName, province, country].filter(Boolean).join(', ');
+        const params = new URLSearchParams({
+            q: query,
+            format: 'json',
+            polygon_geojson: '1',
+            addressdetails: '1',
+            limit: '5'
+        });
+
+        const url = `https://nominatim.openstreetmap.org/search?${params.toString()}`;
+        console.log('Fetching parent city boundary:', url);
+
+        try {
+            const response = await fetch(url, {
+                headers: { 'User-Agent': 'ArtistLocationMap/1.0' }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Nominatim API error: ${response.statusText}`);
+            }
+
+            const data = await response.json() as NominatimResponse[];
+
+            // Find a result that has a proper polygon boundary (not a Point)
+            for (const result of data) {
+                if (result.geojson && (result.geojson as any).type !== 'Point') {
+                    console.log('Found parent city with boundary:', result.display_name, (result.geojson as any).type);
+                    return result;
+                }
+            }
+
+            console.log('No parent city with polygon boundary found');
+            return null;
+        } catch (error) {
+            console.error('Error fetching city with boundary:', error);
+            return null;
+        }
+    },
+
+    /**
      * Save city from Nominatim data
      */
     saveFromNominatim: async (data: NominatimResponse): Promise<City> => {
+        const geoType = data.geojson ? (data.geojson as any).type : null;
+
+        // For Point geometries, try to fetch the parent city's actual boundary
+        if (geoType === 'Point') {
+            const parentCityName = data.address?.city || data.address?.town || data.address?.village;
+            if (parentCityName) {
+                const parentProvince = data.address?.state || data.address?.province || data.address?.region || '';
+                const parentCountry = data.address?.country || '';
+
+                console.log(`Point geometry detected. Looking for parent city: ${parentCityName}, ${parentProvince}, ${parentCountry}`);
+
+                const parentCityData = await CityService.fetchCityWithBoundary(parentCityName, parentProvince, parentCountry);
+                if (parentCityData) {
+                    console.log('Using parent city boundary instead of Point');
+                    // Recursively save the parent city (which has a real boundary)
+                    return await CityService.saveFromNominatim(parentCityData);
+                }
+            }
+        }
+
         const city = data.address?.city
                   || data.address?.administrative
                   || data.address?.town
                   || data.address?.village
                   || data.name
                   || 'Unknown';
-        const province = data.address?.state || data.address?.province || data.address?.region || 'Unknown';
+
+        // Extract province - try address fields first, then parse from displayName
+        let province = data.address?.state || data.address?.province || data.address?.region;
+        if (!province && data.display_name) {
+            const parts = data.display_name.split(',').map(p => p.trim());
+            const country = data.address?.country;
+            if (parts.length >= 3 && country) {
+                const countryIndex = parts.findIndex(p => p === country);
+                if (countryIndex >= 2) {
+                    for (let i = countryIndex - 1; i >= 0; i--) {
+                        const part = parts[i];
+                        if (!part.match(/^\d/) && !part.match(/\d{3,}/)) {
+                            province = part;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        province = province || 'Unknown';
         const country = data.address?.country || 'Unknown';
 
         const client = await pool.connect();
@@ -299,9 +386,37 @@ export const CityService = {
                 throw new Error('No geojson data from Nominatim');
             }
 
-            const geojson = data.geojson.type === 'Polygon'
-                ? { type: 'MultiPolygon', coordinates: [data.geojson.coordinates] }
-                : data.geojson;
+            // Convert geometry to MultiPolygon format expected by database
+            // (ST_Force2D in the SQL handles Z coordinate stripping)
+            let geojson: any;
+            const geometryType = (data.geojson as any).type;
+
+            if (geometryType === 'Polygon') {
+                geojson = { type: 'MultiPolygon', coordinates: [(data.geojson as any).coordinates] };
+            } else if (geometryType === 'Point') {
+                // Fallback: create a small square polygon if no parent city found
+                const coords = (data.geojson as any).coordinates as number[];
+                const lng = coords[0];
+                const lat = coords[1];
+                const offset = 0.001;
+                geojson = {
+                    type: 'MultiPolygon',
+                    coordinates: [[[
+                        [lng - offset, lat - offset],
+                        [lng + offset, lat - offset],
+                        [lng + offset, lat + offset],
+                        [lng - offset, lat + offset],
+                        [lng - offset, lat - offset]
+                    ]]]
+                };
+            } else if (geometryType === 'MultiPolygon') {
+                geojson = data.geojson;
+            } else {
+                geojson = data.geojson;
+            }
+
+            console.log('Original geojson type:', geometryType);
+            console.log('Processed geojson:', JSON.stringify(geojson).substring(0, 200));
 
             const result = await client.query(`
                 INSERT INTO city_boundaries (
@@ -313,8 +428,8 @@ export const CityService = {
                     $1, $2, $3,
                     $4, $5, $6, $7, $8, $9,
                     $10, $11,
-                    ST_SetSRID(ST_GeomFromGeoJSON($12), 4326)::geography,
-                    ST_SetSRID(ST_GeomFromGeoJSON($12), 4326)::geography,
+                    ST_SetSRID(ST_Force2D(ST_GeomFromGeoJSON($12)), 4326)::geography,
+                    ST_SetSRID(ST_Force2D(ST_GeomFromGeoJSON($12)), 4326)::geography,
                     ST_SetSRID(ST_MakePoint($13, $14), 4326)::geography
                 )
                 ON CONFLICT (osm_id, osm_type) DO UPDATE SET

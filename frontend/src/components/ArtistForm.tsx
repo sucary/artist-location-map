@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ChevronDownIcon, ArrowDownIcon, EditIcon } from './Icons/FormIcons';
 import { HomeIcon, MusicIcon, YoutubeIcon, InstagramIcon, XIcon } from './Icons/SocialIcons';
 import { LocationSearch } from './LocationSearch';
+import { createArtist, updateArtist } from '../services/api';
 import type { SearchResult } from '../services/api';
 import type { Artist } from '../types/artist';
 
@@ -11,10 +12,49 @@ interface ArtistFormProps {
     onCancel?: () => void;
 }
 
-const ArtistForm = ({ initialData, onCancel }: ArtistFormProps) => {
+const extractLocationData = (result: SearchResult) => {
+    const coordinates = result.center || { lat: result.lat, lng: result.lng };
+    const address = (result as any).address || {};
+    let city = result.name || address.city || address.locality || address.town || address.village || '';
+    let province = result.province || address.province || address.state || '';
+    const country = result.country || address.country || '';
+
+    // If province is empty or is an ISO code (like JP-13), extract from displayName
+    if (!province || province.match(/^[A-Z]{2}-\d+$/)) {
+        const parts = result.displayName.split(',').map(p => p.trim());
+        if (parts.length >= 2) {
+            for (let i = parts.length - 2; i >= 0; i--) {
+                const part = parts[i];
+                if (!part.match(/^\d/) && !part.match(/\d{3,}/)) {
+                    province = part;
+                    break;
+                }
+            }
+            if (!province) {
+                province = parts[parts.length - 2];
+            }
+        }
+    }
+    if (!city && province) city = province;
+    if (city && !province) province = city;
+
+    return {
+        city,
+        province,
+        country,
+        coordinates,
+        displayName: result.displayName,
+        osmId: result.osmId,
+        osmType: result.osmType
+    };
+};
+
+const ArtistForm = ({ initialData, onSubmit, onCancel }: ArtistFormProps) => {
     const [isSocialExpanded, setIsSocialExpanded] = useState(false);
     const [isEditingName, setIsEditingName] = useState(false);
-    
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
     const [formData, setFormData] = useState<Partial<Artist>>(initialData || {
         name: 'New Artist',
         profilePicture: '',
@@ -30,38 +70,87 @@ const ArtistForm = ({ initialData, onCancel }: ArtistFormProps) => {
         }));
     };
 
-    const handleOriginalLocationSelect = (result: SearchResult) => {
+    const handleLocationSelect = (result: SearchResult, locationType: 'originalLocation' | 'activeLocation') => {
+        console.log(`${locationType} selected:`, result);
         setFormData(prev => ({
             ...prev,
-            originalLocation: {
-                city: result.name,
-                province: result.province,
-                country: result.country,
-                coordinates: result.center,
-                displayName: result.displayName,
-                osmId: result.osmId,
-                osmType: result.osmType
-            }
+            [locationType]: extractLocationData(result)
         }));
-    };
-
-    const handleActiveLocationSelect = (result: SearchResult) => {
-        setFormData(prev => ({
-            ...prev,
-            activeLocation: {
-                city: result.name,
-                province: result.province,
-                country: result.country,
-                coordinates: result.center,
-                displayName: result.displayName,
-                osmId: result.osmId,
-                osmType: result.osmType
-            }
-        }));
+        setError(null);
     };
 
     const getIconColor = (value?: string) => {
         return value ? "text-[#FA2D48]" : "text-gray-400";
+    };
+
+    const validateForm = (): string | null => {
+        if (!formData.name || formData.name.trim() === '' || formData.name === 'New Artist') {
+            return 'Artist name is required';
+        }
+
+        // Validate original location
+        if (!formData.originalLocation?.coordinates ||
+            (formData.originalLocation.coordinates.lat === 0 && formData.originalLocation.coordinates.lng === 0)) {
+            return 'Original location is required';
+        }
+
+        // Validate active location
+        if (!formData.activeLocation?.coordinates ||
+            (formData.activeLocation.coordinates.lat === 0 && formData.activeLocation.coordinates.lng === 0)) {
+            return 'Active location is required';
+        }
+
+        return null;
+    };
+
+    const handleSave = async () => {
+        setError(null);
+
+        console.log('Form data before validation:', formData);
+
+        const validationError = validateForm();
+        if (validationError) {
+            console.log('Validation failed:', validationError);
+            setError(validationError);
+            return;
+        }
+
+        setIsSaving(true);
+
+        try {
+            console.log('Sending data to API:', formData);
+            let savedArtist: Artist;
+
+            if (initialData?.id) {
+                savedArtist = await updateArtist(initialData.id, formData);
+            } else {
+                savedArtist = await createArtist(formData);
+            }
+
+            console.log('Artist saved successfully:', savedArtist);
+
+            if (onSubmit) {
+                onSubmit(savedArtist);
+            }
+
+            if (onCancel) {
+                onCancel();
+            }
+        } catch (err: any) {
+            console.error('Error saving artist:', err);
+            let errorMessage = 'Failed to save artist. Please try again.';
+            if (err.response?.data?.message) {
+                errorMessage = err.response.data.message;
+            } else if (err.response?.data?.error) {
+                errorMessage = err.response.data.error;
+            } else if (err.message) {
+                errorMessage = err.message;
+            }
+
+            setError(errorMessage);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -119,8 +208,8 @@ const ArtistForm = ({ initialData, onCancel }: ArtistFormProps) => {
                     {/* Locations */}
                     <div className="space-y-4">
                         <LocationSearch
-                            value={formData.originalLocation?.displayName || (formData.originalLocation?.city && formData.originalLocation?.country ? `${formData.originalLocation.city}, ${formData.originalLocation.country}` : '')}
-                            onChange={handleOriginalLocationSelect}
+                            displayValue={formData.originalLocation?.displayName || (formData.originalLocation?.city && formData.originalLocation?.country ? `${formData.originalLocation.city}, ${formData.originalLocation.country}` : '')}
+                            onChange={(result) => handleLocationSelect(result, 'originalLocation')}
                             onManualPin={() => {/* TODO: Enable map picking mode */}}
                             placeholder="Search original location"
                             label="ORIGINAL LOCATION"
@@ -137,8 +226,8 @@ const ArtistForm = ({ initialData, onCancel }: ArtistFormProps) => {
                         </div>
 
                         <LocationSearch
-                            value={formData.activeLocation?.displayName || (formData.activeLocation?.city && formData.activeLocation?.country ? `${formData.activeLocation.city}, ${formData.activeLocation.country}` : '')}
-                            onChange={handleActiveLocationSelect}
+                            displayValue={formData.activeLocation?.displayName || (formData.activeLocation?.city && formData.activeLocation?.country ? `${formData.activeLocation.city}, ${formData.activeLocation.country}` : '')}
+                            onChange={(result) => handleLocationSelect(result, 'activeLocation')}
                             onManualPin={() => {/* TODO: Enable map picking mode */}}
                             placeholder="Search active location"
                             label="ACTIVE LOCATION"
@@ -215,18 +304,28 @@ const ArtistForm = ({ initialData, onCancel }: ArtistFormProps) => {
             </div>
 
             {/* Footer*/}
-            <div className="p-4 border-t border-gray-100 bg-gray-50 flex gap-3">
-                <button 
-                    onClick={onCancel}
-                    className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-[#FA2D48]"
-                >
-                    Cancel
-                </button>
-                <button
-                    className="flex-2 px-4 py-2 text-sm font-medium text-white bg-[#FA2D48] border border-transparent rounded-md hover:bg-[#E11D38] focus:outline-none"
-                >
-                    Save
-                </button>
+            <div className="p-4 border-t border-gray-100 bg-gray-50">
+                {error && (
+                    <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+                        {error}
+                    </div>
+                )}
+                <div className="flex gap-3">
+                    <button
+                        onClick={onCancel}
+                        disabled={isSaving}
+                        className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-[#FA2D48] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleSave}
+                        disabled={isSaving}
+                        className="flex-1 px-4 py-2 text-sm font-medium text-white bg-[#FA2D48] border border-transparent rounded-md hover:bg-[#E11D38] focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {isSaving ? 'Saving...' : 'Save'}
+                    </button>
+                </div>
             </div>
         </div>
     );
