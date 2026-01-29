@@ -1,15 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronDownIcon, ArrowDownIcon, EditIcon } from './Icons/FormIcons';
 import { HomeIcon, MusicIcon, YoutubeIcon, InstagramIcon, XIcon } from './Icons/SocialIcons';
 import { LocationSearch } from './LocationSearch';
 import { createArtist, updateArtist } from '../services/api';
 import type { SearchResult } from '../services/api';
 import type { Artist } from '../types/artist';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface ArtistFormProps {
     initialData?: Artist;
     onSubmit?: (data: Partial<Artist>) => void;
     onCancel?: () => void;
+    onRequestSelection?: (targetField: 'originalLocation' | 'activeLocation') => void;
+    pendingLocationResult?: SearchResult | null;
+    onConsumePendingResult?: () => void;
 }
 
 const extractLocationData = (result: SearchResult) => {
@@ -49,11 +53,20 @@ const extractLocationData = (result: SearchResult) => {
     };
 };
 
-const ArtistForm = ({ initialData, onSubmit, onCancel }: ArtistFormProps) => {
+const ArtistForm = ({
+    initialData,
+    onSubmit,
+    onCancel,
+    onRequestSelection,
+    pendingLocationResult,
+    onConsumePendingResult
+}: ArtistFormProps) => {
+    const queryClient = useQueryClient();
     const [isSocialExpanded, setIsSocialExpanded] = useState(false);
     const [isEditingName, setIsEditingName] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [pendingField, setPendingField] = useState<'originalLocation' | 'activeLocation' | null>(null);
 
     const [formData, setFormData] = useState<Partial<Artist>>(initialData || {
         name: 'New Artist',
@@ -62,6 +75,20 @@ const ArtistForm = ({ initialData, onSubmit, onCancel }: ArtistFormProps) => {
         activeLocation: { city: '', province: '', coordinates: { lat: 0, lng: 0 } },
         socialLinks: {}
     });
+
+    // Handle incoming location result from map selection
+    useEffect(() => {
+        // Only react if there's a pending field and result is not undefined
+        if (pendingField && pendingLocationResult !== undefined) {
+            if (pendingLocationResult) {
+                // Valid location selected
+                handleLocationSelect(pendingLocationResult, pendingField);
+            }
+            // Clear pending state (whether cancelled or completed)
+            setPendingField(null);
+            onConsumePendingResult?.();
+        }
+    }, [pendingLocationResult, pendingField]);
 
     const copyOriginalToActive = () => {
         setFormData(prev => ({
@@ -129,6 +156,9 @@ const ArtistForm = ({ initialData, onSubmit, onCancel }: ArtistFormProps) => {
 
             console.log('Artist saved successfully:', savedArtist);
 
+            // Invalidate artists cache to refresh the map
+            await queryClient.invalidateQueries({ queryKey: ['artists'] });
+
             if (onSubmit) {
                 onSubmit(savedArtist);
             }
@@ -151,6 +181,11 @@ const ArtistForm = ({ initialData, onSubmit, onCancel }: ArtistFormProps) => {
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const handleManualPin = (locationType: 'originalLocation' | 'activeLocation') => {
+        setPendingField(locationType);
+        onRequestSelection?.(locationType);
     };
 
     return (
@@ -210,7 +245,7 @@ const ArtistForm = ({ initialData, onSubmit, onCancel }: ArtistFormProps) => {
                         <LocationSearch
                             displayValue={formData.originalLocation?.displayName || (formData.originalLocation?.city && formData.originalLocation?.country ? `${formData.originalLocation.city}, ${formData.originalLocation.country}` : '')}
                             onChange={(result) => handleLocationSelect(result, 'originalLocation')}
-                            onManualPin={() => {/* TODO: Enable map picking mode */}}
+                            onManualPin={() => handleManualPin('originalLocation')}
                             placeholder="Search original location"
                             label="ORIGINAL LOCATION"
                         />
@@ -228,7 +263,7 @@ const ArtistForm = ({ initialData, onSubmit, onCancel }: ArtistFormProps) => {
                         <LocationSearch
                             displayValue={formData.activeLocation?.displayName || (formData.activeLocation?.city && formData.activeLocation?.country ? `${formData.activeLocation.city}, ${formData.activeLocation.country}` : '')}
                             onChange={(result) => handleLocationSelect(result, 'activeLocation')}
-                            onManualPin={() => {/* TODO: Enable map picking mode */}}
+                            onManualPin={() => handleManualPin('activeLocation')}
                             placeholder="Search active location"
                             label="ACTIVE LOCATION"
                         />

@@ -88,9 +88,10 @@ export const searchCitiesNominatim = async (query: string, limit: number = 20): 
 };
 
 // Reverse geocode coordinates to city
-export const reverseGeocode = async (lat: number, lng: number): Promise<SearchResult> => {
+export const reverseGeocode = async (lat: number, lng: number, withBoundary: boolean = true): Promise<SearchResult> => {
     try {
-        const response = await api.post<SearchResult>('/cities/reverse', { lat, lng });
+        const params = withBoundary ? '?withBoundary=true' : '';
+        const response = await api.post<SearchResult>(`/cities/reverse${params}`, { lat, lng });
         return response.data;
     } catch (error) {
         console.error('Failed to reverse geocode:', error);

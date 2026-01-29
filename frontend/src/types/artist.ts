@@ -54,6 +54,14 @@ export interface Artist {
 export type LocationView = 'original' | 'active';
 
 /**
+ * Selection mode state for manual map-based location selection
+ */
+export interface SelectionMode {
+    active: boolean;
+    targetField: 'originalLocation' | 'activeLocation';
+}
+
+/**
  * Query parameters for filtering artists
  */
 export interface ArtistQueryParams {

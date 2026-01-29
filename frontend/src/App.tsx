@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import './App.css';
-import { checkHealth } from './services/api';
+import { checkHealth, type SearchResult } from './services/api';
 import MapView from './components/Map/MapView';
 import ArtistForm from './components/ArtistForm';
 import AddArtistButton from './components/Map/buttons/AddArtistButton';
+import type { SelectionMode } from './types/artist';
 
 function App() {
     const [status, setStatus] = useState<string>('Checking connection...');
     const [showForm, setShowForm] = useState(false);
+    const [selectionMode, setSelectionMode] = useState<SelectionMode | null>(null);
+    const [pendingLocationResult, setPendingLocationResult] = useState<SearchResult | null | undefined>(undefined);
 
     useEffect(() => {
         let mounted = true;
@@ -33,11 +36,24 @@ function App() {
         };
     }, []);
 
-    /* 
+    const handleStartSelection = (targetField: 'originalLocation' | 'activeLocation') => {
+        setSelectionMode({ active: true, targetField });
+    };
+
+    const handleLocationPick = (result: SearchResult | null) => {
+        setPendingLocationResult(result);
+        setSelectionMode(null);
+    };
+
+    const handleConsumeResult = () => {
+        setPendingLocationResult(undefined);
+    };
+
+    /*
         TODO
             - Make shadowing consistent (shadow-xl/30 vs shadow-md)
             - Add a proper locate icon instead of "X"
-            
+
 
     */
 
@@ -51,8 +67,21 @@ function App() {
                 </div>
             </div>
             {!showForm && <AddArtistButton onClick={() => setShowForm(true)} />}
-            {showForm && <ArtistForm onCancel={() => setShowForm(false)} />}
-            <MapView />
+            {showForm && (
+                <ArtistForm
+                    onCancel={() => {
+                        setShowForm(false);
+                        setSelectionMode(null);
+                    }}
+                    onRequestSelection={handleStartSelection}
+                    pendingLocationResult={pendingLocationResult}
+                    onConsumePendingResult={handleConsumeResult}
+                />
+            )}
+            <MapView
+                selectionMode={selectionMode}
+                onLocationPick={handleLocationPick}
+            />
         </div>
     );
 };

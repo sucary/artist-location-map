@@ -12,6 +12,7 @@ const ViewToggleButton = ({ view, setView }: { view: LocationView ; setView: (vi
             <button
                 onClick={toggleView}
                 className="bg-white px-4 py-2 rounded-full shadow-xl hover:bg-gray-100 transition-colors"
+                style={{ cursor: 'default' }}
                 title="Toggle Location View"
             >
                 {displayName}

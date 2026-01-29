@@ -2,15 +2,21 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { MapContainer, TileLayer, ZoomControl, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { LatLngExpression } from 'leaflet';
-import { getArtists, getCityById } from '../../services/api';
-import type { Artist, LocationView } from '../../types/artist';
+import { getArtists, getCityById, type SearchResult } from '../../services/api';
+import type { Artist, LocationView, SelectionMode } from '../../types/artist';
 import { getDisplayArtists } from '../../utils/mapUtils';
 import LocateControl from './buttons/LocateMeButton';
 import ArtistCluster from './ArtistCluster';
 import ViewToggleButton from './buttons/ViewToggleButton';
+import MapClickHandler from './MapClickHandler';
 import { useQuery } from '@tanstack/react-query';
 
-const MapView = () => {
+interface MapViewProps {
+    selectionMode?: SelectionMode | null;
+    onLocationPick?: ((result: SearchResult | null) => void) | null;
+}
+
+const MapView = ({ selectionMode, onLocationPick }: MapViewProps) => {
     const defaultCenter: LatLngExpression = [35.6762, 139.6503]; // Tokyo
     const defaultZoom = 4;
     const [view, setView] = useState<LocationView>('active');
@@ -79,6 +85,9 @@ const MapView = () => {
                 onArtistSelect={handleArtistSelect}
                 onArtistDeselect={handleArtistDeselect}
             />
+            {selectionMode?.active && (
+                <MapClickHandler onLocationPick={onLocationPick} />
+            )}
             {selectedCity && selectedCity.boundary && (
                 <GeoJSON
                     key={selectedCity.id}
