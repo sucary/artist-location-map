@@ -60,7 +60,7 @@ const ArtistProfile = ({ artist }: ArtistProfileProps) => {
 
                 {/* Artist Name */}
                 <h3
-                    className="absolute bottom-3 left-4 text-lg font-semibold text-white pointer-events-none"
+                    className="absolute bottom-3 left-4 text-lg font-semibold text-white z-10 select-text cursor-text"
                     style={{ textShadow: '0 1px 3px rgba(0,0,0,0.6)' }}
                 >
                     {artist.name}
