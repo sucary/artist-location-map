@@ -1,91 +1,108 @@
-import type { Artist } from '../types/artist';
+import type { Artist, Location } from '../types/artist';
 import { HomeIcon, MusicIcon, YoutubeIcon, InstagramIcon, XIcon } from './Icons/SocialIcons';
+import { EditIcon } from './Icons/FormIcons';
 
 interface ArtistProfileProps {
     artist: Artist;
+    onEdit?: () => void;
 }
+
+const formatLocation = (location: Location): string => {
+    const parts = [location.city, location.province];
+    if (location.country) {
+        parts.push(location.country);
+    }
+    return parts.join(', ');
+};
 
 const ArtistProfile = ({ artist }: ArtistProfileProps) => {
     return (
         <div className="w-80 flex flex-col rounded-lg bg-white shadow-lg overflow-hidden">
-            <div 
-                className="relative w-full h-24 bg-cover bg-center"
-                style={{
-                    backgroundImage: `url(${artist.profilePicture || 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=500&q=60'})`,
-                }}
+            <style>{`
+                .artist-cover:hover .artist-edit-overlay {
+                    opacity: 1 !important;
+                }
+            `}</style>
+            {/* Header with cover image */}
+            <div
+                className="artist-cover relative w-full h-28 bg-gray-200 bg-cover bg-center"
+                style={{ backgroundImage: artist.profilePicture ? `url(${artist.profilePicture})` : undefined }}
             >
-                <div className="absolute inset-0 bg-black/5" />
-
-                <div className="relative z-10 flex items-center gap-4 px-4 h-full">
-                    {/* TODO: 
-                        1.
-                        2. Remove the avatar border when ready
-                        3. Separate the avatar and baclground image
-                        
-                    */}
-                    <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white shrink-0">
-                        <img 
-                            src={artist.profilePicture || 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=150&h=150'}
-                            alt={artist.name} 
-                            className="w-full h-full object-cover" 
-                        />
-
-                    </div>
-                    <div>
-                        <h3
-                            className="font-bold text-lg leading-tight text-white"
-                            style={{ textShadow: '0 0 4px rgba(0,0,0,0.8)' }}
-                        >
-                            {artist.name}
-                        </h3>
-                        <p
-                            className="text-sm text-gray-300"
-                            style={{ textShadow: '0 0 4px rgba(0,0,0,0.8)' }}
-                        >
-                            {artist.activeLocation.city}, {artist.activeLocation.province}
-                        </p>
-                    </div>
+                {/* Edit overlay - shows on hover */}
+                <div
+                    className="artist-edit-overlay absolute inset-0 flex items-center justify-center cursor-pointer"
+                    style={{
+                        opacity: 0,
+                        transition: 'opacity 0.2s ease-in-out',
+                        backgroundColor: 'rgba(0, 0, 0, 0.4)'
+                    }}
+                    data-action="edit"
+                    data-artist-id={artist.id}
+                >
+                    <EditIcon className="w-6 h-6 text-white" />
                 </div>
+
+                {/* Artist Name */}
+                <h3
+                    className="absolute bottom-3 left-4 text-lg font-semibold text-white pointer-events-none"
+                    style={{ textShadow: '0 1px 3px rgba(0,0,0,0.6)' }}
+                >
+                    {artist.name}
+                </h3>
             </div>
 
-            {/* The bottom half of the card: original location and social media */}
-
-            <div className="flex flex-col p-4 gap-4">
-                <div className="flex flex-row items-center justify-between w-full">
-                    <div className="text-gray-500 text-sm">From</div>
-                    <div className="text-gray-500 text-sm">
-                        {artist.originalLocation.city}, {artist.originalLocation.province}
-                    </div>
+            {/* Content section */}
+            <div className="px-4 py-3 flex flex-col gap-2.5">
+                {/* Origin row */}
+                <div className="flex items-center gap-4">
+                    <span className="px-2 py-0.5 text-xs font-medium text-[#E53935] border border-[#E53935] rounded">
+                        Origin
+                    </span>
+                    <span className="text-sm text-gray-600">
+                        {formatLocation(artist.originalLocation)}
+                    </span>
                 </div>
 
-                <div className="h-px w-full bg-gray-200" />
+                {/* Active row */}
+                <div className="flex items-center gap-4">
+                    <span className="px-2 py-0.5 text-xs font-medium text-[#E53935] border border-[#E53935] rounded">
+                        Active
+                    </span>
+                    <span className="text-sm text-gray-600">
+                        {formatLocation(artist.activeLocation)}
+                    </span>
+                </div>
 
-                <div className="flex flex-row items-center justify-between w-full">
-                    <div className="text-gray-500 text-sm">Links</div>
+                {/* Divider */}
+                <div className="h-px w-full bg-gray-200 my-1" />
+
+                {/* Links row */}
+                <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Links</span>
                     <div className="flex gap-1">
                         {artist.socialLinks?.website && (
-                            <a href={artist.socialLinks.website} target="_blank" rel="noopener noreferrer" className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#FA2D48] transition-colors">
-                                <HomeIcon className="w-4 h-4" />
+                            <a href={artist.socialLinks.website} target="_blank" rel="noopener noreferrer" className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#E53935] transition-colors">
+                                <HomeIcon className="w-5 h-5" />
                             </a>
                         )}
                         {artist.socialLinks?.appleMusic && (
-                            <a href={artist.socialLinks.appleMusic} target="_blank" rel="noopener noreferrer" className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#FA2D48] transition-colors">
-                                <MusicIcon className="w-4 h-4" />
+                            <a href={artist.socialLinks.appleMusic} target="_blank" rel="noopener noreferrer" className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#E53935] transition-colors">
+                                <MusicIcon className="w-5 h-5" />
                             </a>
                         )}
                         {artist.socialLinks?.youtube && (
-                        <a href={artist.socialLinks.youtube} target="_blank" rel="noopener noreferrer" className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#FA2D48] transition-colors">
-                             <YoutubeIcon className="w-4 h-4" />
-                        </a>
+                            <a href={artist.socialLinks.youtube} target="_blank" rel="noopener noreferrer" className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#E53935] transition-colors">
+                                <YoutubeIcon className="w-5 h-5" />
+                            </a>
                         )}
                         {artist.socialLinks?.instagram && (
-                            <a href={artist.socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#FA2D48] transition-colors">
-                                <InstagramIcon className="w-4 h-4" />
+                            <a href={artist.socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#E53935] transition-colors">
+                                <InstagramIcon className="w-5 h-5" />
                             </a>
                         )}
                         {artist.socialLinks?.twitter && (
-                            <a href={artist.socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#FA2D48] transition-colors">
-                                <XIcon className="w-4 h-4" />
+                            <a href={artist.socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#E53935] transition-colors">
+                                <XIcon className="w-5 h-5" />
                             </a>
                         )}
                     </div>
