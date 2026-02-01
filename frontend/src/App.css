@@ -23,4 +23,14 @@
 .leaflet-div-icon.custom-cluster-marker {
   background: transparent;
   border: none;
+  transition: opacity 0.2s ease-out;
+}
+
+.leaflet-marker-icon.expanded-cluster-marker {
+  transition: transform 0.3s ease-out;
+}
+
+.leaflet-div-icon.cluster-center-marker {
+  background: transparent;
+  border: none;
 }

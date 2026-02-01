@@ -1,0 +1,88 @@
+import L from 'leaflet';
+import type { Artist } from '../../../types/artist';
+
+export interface PopupEventHandlers {
+  onArtistSelect?: (artist: Artist) => void;
+  onArtistDeselect?: () => void;
+  onEditArtist?: (artist: Artist) => void;
+  onDeleteArtist?: (artist: Artist) => void;
+}
+
+export interface SetupPopupOptions extends PopupEventHandlers {
+  map: L.Map;
+  marker: L.Marker;
+  artist: Artist;
+  onBeforeAction?: () => void;
+}
+
+/**
+ * Sets up popup event handlers for a marker.
+ * Handles artist selection/deselection and edit/delete button clicks.
+ */
+export const setupMarkerPopupEvents = ({
+  map,
+  marker,
+  artist,
+  onArtistSelect,
+  onArtistDeselect,
+  onEditArtist,
+  onDeleteArtist,
+  onBeforeAction,
+}: SetupPopupOptions): void => {
+  marker.on('popupopen', (e) => {
+    if (onArtistSelect) {
+      onArtistSelect(artist);
+    }
+
+    // Click handler for edit/delete buttons via event delegation
+    const popupElement = e.popup.getElement();
+    if (popupElement) {
+      const handleActionClick = (event: Event) => {
+        const target = event.target as HTMLElement;
+        const editButton = target.closest('[data-action="edit"]');
+        const deleteButton = target.closest('[data-action="delete"]');
+
+        if (editButton && onEditArtist) {
+          event.preventDefault();
+          event.stopPropagation();
+          map.closePopup();
+          onBeforeAction?.();
+          onEditArtist(artist);
+        } else if (deleteButton && onDeleteArtist) {
+          event.preventDefault();
+          event.stopPropagation();
+          map.closePopup();
+          onBeforeAction?.();
+          onDeleteArtist(artist);
+        }
+      };
+      popupElement.addEventListener('click', handleActionClick);
+    }
+  });
+
+  marker.on('popupclose', () => {
+    if (onArtistDeselect) {
+      onArtistDeselect();
+    }
+  });
+};
+
+/**
+ * Creates the collapse button marker for expanded clusters.
+ */
+export const createCollapseButton = (
+  latLng: L.LatLng,
+  onCollapse: () => void
+): L.Marker => {
+  const collapseIcon = L.divIcon({
+    html: `<div class="flex items-center justify-center w-6 h-6 bg-white text-black rounded-full font-bold border border-black shadow-lg cursor-pointer hover:bg-gray-100 text-sm">×</div>`,
+    className: 'cluster-center-marker expanded-cluster-marker',
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  });
+
+  const marker = L.marker(latLng, { icon: collapseIcon });
+  marker.on('click', onCollapse);
+
+  return marker;
+};

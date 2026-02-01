@@ -1,96 +1,94 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
-// @ts-ignore
-import * as LMarkerCluster from 'leaflet.markercluster';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { Artist, LocationView } from '../../types/artist';
 import ArtistProfile from '../ArtistProfile';
 import { createArtistMarker } from '../../utils/mapUtils';
+import {
+  CLUSTER_CONFIG,
+  createClusterIconFactory,
+  setupMarkerPopupEvents,
+  useClusterExpansion,
+} from './cluster';
 
 interface ArtistClusterProps {
-    artists: Artist[];
-    view: LocationView;
-    onArtistSelect?: (artist: Artist) => void;
-    onArtistDeselect?: () => void;
-    onEditArtist?: (artist: Artist) => void;
-    onDeleteArtist?: (artist: Artist) => void;
+  artists: Artist[];
+  view: LocationView;
+  onArtistSelect?: (artist: Artist) => void;
+  onArtistDeselect?: () => void;
+  onEditArtist?: (artist: Artist) => void;
+  onDeleteArtist?: (artist: Artist) => void;
 }
 
-const ArtistCluster = ({ artists, view, onArtistSelect, onArtistDeselect, onEditArtist, onDeleteArtist }: ArtistClusterProps) => {
+const ArtistCluster = ({
+  artists,
+  view,
+  onArtistSelect,
+  onArtistDeselect,
+  onEditArtist,
+  onDeleteArtist,
+}: ArtistClusterProps) => {
   const map = useMap();
+  const markerClusterGroupRef = useRef<L.MarkerClusterGroup | null>(null);
 
+  const { expandCluster, collapseCluster } = useClusterExpansion({
+    map,
+    onArtistSelect,
+    onArtistDeselect,
+    onEditArtist,
+    onDeleteArtist,
+  });
 
   useEffect(() => {
-    // Distance basedd clustering
     const markerClusterGroup = L.markerClusterGroup({
       showCoverageOnHover: false,
-      maxClusterRadius: 100,
-      disableClusteringAtZoom: 9, // The map has 0-20 zooming levels by default
-      
-      // Styling for the cluster icons
-      iconCreateFunction: (cluster: any) => {
-        const count = cluster.getChildCount();
-        return L.divIcon({
-          html: `<div class="flex items-center justify-center w-8 h-8 bg-black text-white rounded-full font-bold border-2 border-white shadow-lg">${count}</div>`,
-          className: 'custom-cluster-marker',
-          iconSize: [32, 32],
-        });
-      }
+      maxClusterRadius: CLUSTER_CONFIG.maxClusterRadius,
+      disableClusteringAtZoom: CLUSTER_CONFIG.disableClusteringAtZoomLevel,
+      zoomToBoundsOnClick: false,
+      spiderfyOnMaxZoom: false,
+      iconCreateFunction: createClusterIconFactory({ map }),
     });
 
+    markerClusterGroupRef.current = markerClusterGroup;
+
+    // Handle cluster click - expand instead of zoom
+    markerClusterGroup.on('clusterclick', (e: L.LeafletEvent) => {
+      expandCluster((e as L.LeafletEvent & { layer: L.MarkerCluster }).layer);
+    });
+
+    // Add artist markers
     artists.forEach((artist) => {
       const icon = createArtistMarker(artist);
-      const location = view === 'active' ? artist.activeLocation : artist.originalLocation;
+      const location =
+        view === 'active' ? artist.activeLocation : artist.originalLocation;
       const marker = L.marker(
-        [location.coordinates.lat, location.coordinates.lng], 
+        [location.coordinates.lat, location.coordinates.lng],
         { icon }
       );
-      
+
+      // Store artist data on marker for later retrieval
+      (marker as L.Marker & { _artistData?: Artist })._artistData = artist;
+
       // Bind the popup
       const popupContent = renderToStaticMarkup(<ArtistProfile artist={artist} />);
       marker.bindPopup(popupContent, {
-          className: 'artist-popup',
-          closeButton: false,
-          minWidth: 320
+        className: 'artist-popup',
+        closeButton: false,
+        minWidth: 320,
       });
 
-      marker.on('popupopen', (e) => {
-          if (onArtistSelect) {
-              onArtistSelect(artist);
-          }
-
-          // Click handler for edit/delete buttons via event delegation
-          const popupElement = e.popup.getElement();
-          if (popupElement) {
-              const handleActionClick = (event: Event) => {
-                  const target = event.target as HTMLElement;
-                  const editButton = target.closest('[data-action="edit"]');
-                  const deleteButton = target.closest('[data-action="delete"]');
-
-                  if (editButton && onEditArtist) {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      map.closePopup();
-                      onEditArtist(artist);
-                  } else if (deleteButton && onDeleteArtist) {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      map.closePopup();
-                      onDeleteArtist(artist);
-                  }
-              };
-              popupElement.addEventListener('click', handleActionClick);
-          }
-      });
-
-      marker.on('popupclose', () => {
-          if (onArtistDeselect) {
-              onArtistDeselect();
-          }
+      setupMarkerPopupEvents({
+        map,
+        marker,
+        artist,
+        onArtistSelect,
+        onArtistDeselect,
+        onEditArtist,
+        onDeleteArtist,
       });
 
       markerClusterGroup.addLayer(marker);
@@ -98,10 +96,28 @@ const ArtistCluster = ({ artists, view, onArtistSelect, onArtistDeselect, onEdit
 
     map.addLayer(markerClusterGroup);
 
+    // Force refresh clusters after map is fully ready
+    const refreshTimeout = setTimeout(() => {
+      markerClusterGroup.refreshClusters();
+    }, CLUSTER_CONFIG.refreshDelay);
+
     return () => {
+      clearTimeout(refreshTimeout);
+      collapseCluster();
       map.removeLayer(markerClusterGroup);
+      markerClusterGroupRef.current = null;
     };
-  }, [map, artists, view, onArtistSelect, onArtistDeselect, onEditArtist, onDeleteArtist]);
+  }, [
+    map,
+    artists,
+    view,
+    onArtistSelect,
+    onArtistDeselect,
+    onEditArtist,
+    onDeleteArtist,
+    expandCluster,
+    collapseCluster,
+  ]);
 
   return null;
 };

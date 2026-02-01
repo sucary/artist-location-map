@@ -17,9 +17,9 @@ L.Marker.prototype.options.icon = DefaultMarker;
 export const createArtistMarker = (artist: Artist) => {
   const imageUrl = artist.profilePicture || 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=150&h=150';
   const iconHtml = `
-    <div class="relative w-10 h-10 rounded-full border-2 border-white shadow-lg overflow-hidden bg-gray-200 group">
-      <img 
-        src="${imageUrl}" 
+    <div class="relative w-5 h-5 rounded-full border border-white shadow-lg overflow-hidden bg-gray-200 group">
+      <img
+        src="${imageUrl}"
         class="w-full h-full object-cover"
         alt="${artist.name}"
       />
@@ -29,9 +29,9 @@ export const createArtistMarker = (artist: Artist) => {
   return L.divIcon({
     html: iconHtml,
     className: 'custom-artist-marker',
-    iconSize: [40, 40],
-    iconAnchor: [20, 20],
-    popupAnchor: [0, -20],
+    iconSize: [20, 20],
+    iconAnchor: [10, 10],
+    popupAnchor: [0, -10],
   });
 };
 
