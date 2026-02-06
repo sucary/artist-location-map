@@ -19,9 +19,18 @@ export const SocialLinksSchema = z.object({
     youtube: z.string().url("Invalid YouTube URL").optional().or(z.literal('')),
 });
 
+export const CropAreaSchema = z.object({
+    x: z.number(),
+    y: z.number(),
+    width: z.number().positive(),
+    height: z.number().positive(),
+});
+
 export const ArtistSchema = z.object({
     name: z.string().min(1, "Name is required"),
-    profilePicture: z.string().optional(),
+    sourceImage: z.string().optional(),
+    avatarCrop: CropAreaSchema.optional(),
+    profileCrop: CropAreaSchema.optional(),
     originalLocation: LocationSchema,
     activeLocation: LocationSchema,
     socialLinks: SocialLinksSchema.optional(),

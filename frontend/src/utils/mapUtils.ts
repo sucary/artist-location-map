@@ -2,6 +2,7 @@ import L from 'leaflet';
 import type { Artist } from '../types/artist';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+import { getAvatarUrl } from './cloudinaryUrl';
 
 // Initialize default marker icon
 const DefaultMarker = L.icon({
@@ -13,14 +14,19 @@ const DefaultMarker = L.icon({
 
 L.Marker.prototype.options.icon = DefaultMarker;
 
+// Placeholder img
+const getPlaceholderUrl = (name: string) =>
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&size=150&background=e5e7eb&color=9ca3af`;
+
 // Turn an artist profile into a Leaflet div icon
 export const createArtistMarker = (artist: Artist) => {
-  const imageUrl = artist.profilePicture || 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=150&h=150';
+  // Use Cloudinary transformation to get avatar image
+  const imageUrl = getAvatarUrl(artist.sourceImage, artist.avatarCrop) || getPlaceholderUrl(artist.name);
   const iconHtml = `
     <div class="relative w-5 h-5 rounded-full border border-white shadow-lg overflow-hidden bg-gray-200 group">
       <img
         src="${imageUrl}"
-        class="w-full h-full object-cover"
+        class="w-full h-full object-cover object-center"
         alt="${artist.name}"
       />
     </div>

@@ -138,7 +138,7 @@ export const LocationSearch = ({ displayValue = '', onChange, onManualPin, place
                         <input
                             type="text"
                             placeholder={placeholder || "Search location..."}
-                            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-[#FA2D48] focus:ring-1 focus:ring-inset focus:ring-[#FA2D48]"
+                            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-inset focus:ring-primary"
                             value={query !== null ? query : displayValue}
                             onChange={(e) => {
                                 setQuery(e.target.value);
@@ -166,7 +166,7 @@ export const LocationSearch = ({ displayValue = '', onChange, onManualPin, place
                     <button
                         onClick={onManualPin}
                         type="button"
-                        className="p-2 text-gray-400 hover:text-[#FA2D48] transition-colors"
+                        className="p-2 text-gray-400 hover:text-primary transition-colors"
                         title="Manually select on map"
                     >
                         <MapPinIcon className="w-5 h-5" />
@@ -179,7 +179,7 @@ export const LocationSearch = ({ displayValue = '', onChange, onManualPin, place
                         <span>{error}</span>
                         <button
                             onClick={handleRetry}
-                            className="ml-2 text-[#FA2D48] hover:underline"
+                            className="ml-2 text-primary hover:underline"
                         >
                             Retry
                         </button>
@@ -212,7 +212,7 @@ export const LocationSearch = ({ displayValue = '', onChange, onManualPin, place
                         >
                             <div className="font-medium text-gray-900 flex items-center">
                                 {result.isPriority && (
-                                    <span className="inline-block w-2 h-2 bg-[#FA2D48] rounded-full mr-2" />
+                                    <span className="inline-block w-2 h-2 bg-primary rounded-full mr-2" />
                                 )}
                                 {result.displayName}
                             </div>
@@ -227,7 +227,7 @@ export const LocationSearch = ({ displayValue = '', onChange, onManualPin, place
                             onClick={() => handleSearchNominatim()}
                             disabled={isLoading}
                             type="button"
-                            className="w-full px-3 py-2 text-sm text-[#FA2D48] hover:bg-gray-50 font-medium border-t disabled:opacity-50"
+                            className="w-full px-3 py-2 text-sm text-primary hover:bg-gray-50 font-medium border-t disabled:opacity-50"
                         >
                             {isLoading ? 'Searching...' : 'Search Nominatim for more'}
                         </button>

@@ -1,4 +1,4 @@
-import { Artist, StoreArtistDTO, UpdateStoreArtistDTO, LocationCount, LocationView, ArtistQueryParams } from '../types/artist';
+import { Artist, StoreArtistDTO, UpdateStoreArtistDTO, LocationCount, LocationView, ArtistQueryParams, CropArea } from '../types/artist';
 import pool from '../config/database';
 
 /**
@@ -8,7 +8,9 @@ function rowToArtist(row: Record<string, unknown>): Artist {
     return {
         id: row.id as string,
         name: row.name as string,
-        profilePicture: row.profile_picture as string | undefined,
+        sourceImage: row.source_image as string | undefined,
+        avatarCrop: row.avatar_crop as CropArea | undefined,
+        profileCrop: row.profile_crop as CropArea | undefined,
         originalLocation: {
             city: row.original_city as string,
             province: row.original_province as string,
@@ -28,8 +30,9 @@ function rowToArtist(row: Record<string, unknown>): Artist {
         socialLinks: {
             instagram: (row.instagram_url as string) || undefined,
             twitter: (row.twitter_url as string) || undefined,
-            spotify: (row.spotify_url as string) || undefined,
-            website: (row.website_url as string) || undefined
+            appleMusic: (row.apple_music_url as string) || undefined,
+            website: (row.website_url as string) || undefined,
+            youtube: (row.youtube_url as string) || undefined
         },
         createdAt: row.created_at as Date,
         updatedAt: row.updated_at as Date,
@@ -88,7 +91,7 @@ export const ArtistStore = {
 
             const result = await pool.query(`
                 SELECT
-                    id, name, profile_picture,
+                    id, name, source_image, avatar_crop, profile_crop,
                     original_city, original_province, original_city_id,
                     ST_Y(original_coordinates::geometry) as original_lat,
                     ST_X(original_coordinates::geometry) as original_lng,
@@ -99,7 +102,7 @@ export const ArtistStore = {
                     ST_X(original_display_coordinates::geometry) as original_display_lng,
                     ST_Y(active_display_coordinates::geometry) as active_display_lat,
                     ST_X(active_display_coordinates::geometry) as active_display_lng,
-                    instagram_url, twitter_url, spotify_url, website_url,
+                    instagram_url, twitter_url, apple_music_url, website_url, youtube_url,
                     created_at, updated_at
                 FROM artists
                 ${whereClause}
@@ -117,7 +120,7 @@ export const ArtistStore = {
         try {
             const result = await pool.query(`
                 SELECT
-                    id, name, profile_picture,
+                    id, name, source_image, avatar_crop, profile_crop,
                     original_city, original_province, original_city_id,
                     ST_Y(original_coordinates::geometry) as original_lat,
                     ST_X(original_coordinates::geometry) as original_lng,
@@ -128,7 +131,7 @@ export const ArtistStore = {
                     ST_X(original_display_coordinates::geometry) as original_display_lng,
                     ST_Y(active_display_coordinates::geometry) as active_display_lat,
                     ST_X(active_display_coordinates::geometry) as active_display_lng,
-                    instagram_url, twitter_url, spotify_url, website_url,
+                    instagram_url, twitter_url, apple_music_url, website_url, youtube_url,
                     created_at, updated_at
                 FROM artists
                 WHERE id = $1
@@ -149,22 +152,22 @@ export const ArtistStore = {
         try {
             const result = await pool.query(`
                 INSERT INTO artists (
-                    name, profile_picture,
+                    name, source_image, avatar_crop, profile_crop,
                     original_city, original_province, original_coordinates, original_city_id,
                     active_city, active_province, active_coordinates, active_city_id,
                     original_display_coordinates,
                     active_display_coordinates,
-                    instagram_url, twitter_url, spotify_url, website_url
+                    instagram_url, twitter_url, apple_music_url, website_url, youtube_url
                 ) VALUES (
-                    $1, $2,
-                    $3, $4, ST_SetSRID(ST_MakePoint($5, $6), 4326)::geography, $15,
-                    $7, $8, ST_SetSRID(ST_MakePoint($9, $10), 4326)::geography, $16,
-                    ST_SetSRID(ST_MakePoint($17, $18), 4326)::geography,
-                    ST_SetSRID(ST_MakePoint($19, $20), 4326)::geography,
-                    $11, $12, $13, $14
+                    $1, $2, $3, $4,
+                    $5, $6, ST_SetSRID(ST_MakePoint($7, $8), 4326)::geography, $18,
+                    $9, $10, ST_SetSRID(ST_MakePoint($11, $12), 4326)::geography, $19,
+                    ST_SetSRID(ST_MakePoint($20, $21), 4326)::geography,
+                    ST_SetSRID(ST_MakePoint($22, $23), 4326)::geography,
+                    $13, $14, $15, $16, $17
                 )
                 RETURNING
-                    id, name, profile_picture,
+                    id, name, source_image, avatar_crop, profile_crop,
                     original_city, original_province, original_city_id,
                     ST_Y(original_coordinates::geometry) as original_lat,
                     ST_X(original_coordinates::geometry) as original_lng,
@@ -175,11 +178,13 @@ export const ArtistStore = {
                     ST_X(original_display_coordinates::geometry) as original_display_lng,
                     ST_Y(active_display_coordinates::geometry) as active_display_lat,
                     ST_X(active_display_coordinates::geometry) as active_display_lng,
-                    instagram_url, twitter_url, spotify_url, website_url,
+                    instagram_url, twitter_url, apple_music_url, website_url, youtube_url,
                     created_at, updated_at
             `, [
                 data.name,
-                data.profilePicture || null,
+                data.sourceImage || null,
+                data.avatarCrop ? JSON.stringify(data.avatarCrop) : null,
+                data.profileCrop ? JSON.stringify(data.profileCrop) : null,
                 data.originalLocation.city,
                 data.originalLocation.province,
                 data.originalLocation.coordinates.lng,  // PostGIS uses lng first
@@ -190,8 +195,9 @@ export const ArtistStore = {
                 data.activeLocation.coordinates.lat,
                 data.socialLinks?.instagram || null,
                 data.socialLinks?.twitter || null,
-                data.socialLinks?.spotify || null,
+                data.socialLinks?.appleMusic || null,
                 data.socialLinks?.website || null,
+                data.socialLinks?.youtube || null,
                 data.originalCityId,
                 data.activeCityId,
                 data.originalLocationDisplayCoordinates.lng,
@@ -221,9 +227,19 @@ export const ArtistStore = {
                 values.push(data.name);
             }
 
-            if (data.profilePicture !== undefined) {
-                updates.push(`profile_picture = $${paramIndex++}`);
-                values.push(data.profilePicture);
+            if (data.sourceImage !== undefined) {
+                updates.push(`source_image = $${paramIndex++}`);
+                values.push(data.sourceImage);
+            }
+
+            if (data.avatarCrop !== undefined) {
+                updates.push(`avatar_crop = $${paramIndex++}`);
+                values.push(data.avatarCrop ? JSON.stringify(data.avatarCrop) : null);
+            }
+
+            if (data.profileCrop !== undefined) {
+                updates.push(`profile_crop = $${paramIndex++}`);
+                values.push(data.profileCrop ? JSON.stringify(data.profileCrop) : null);
             }
 
             if (data.originalLocation) {
@@ -277,13 +293,17 @@ export const ArtistStore = {
                     updates.push(`twitter_url = $${paramIndex++}`);
                     values.push(data.socialLinks.twitter || null);
                 }
-                if (data.socialLinks.spotify !== undefined) {
-                    updates.push(`spotify_url = $${paramIndex++}`);
-                    values.push(data.socialLinks.spotify || null);
+                if (data.socialLinks.appleMusic !== undefined) {
+                    updates.push(`apple_music_url = $${paramIndex++}`);
+                    values.push(data.socialLinks.appleMusic || null);
                 }
                 if (data.socialLinks.website !== undefined) {
                     updates.push(`website_url = $${paramIndex++}`);
                     values.push(data.socialLinks.website || null);
+                }
+                if (data.socialLinks.youtube !== undefined) {
+                    updates.push(`youtube_url = $${paramIndex++}`);
+                    values.push(data.socialLinks.youtube || null);
                 }
             }
 
@@ -300,7 +320,7 @@ export const ArtistStore = {
                 SET ${updates.join(', ')}
                 WHERE id = $${paramIndex}
                 RETURNING
-                    id, name, profile_picture,
+                    id, name, source_image, avatar_crop, profile_crop,
                     original_city, original_province, original_city_id,
                     ST_Y(original_coordinates::geometry) as original_lat,
                     ST_X(original_coordinates::geometry) as original_lng,
@@ -311,7 +331,7 @@ export const ArtistStore = {
                     ST_X(original_display_coordinates::geometry) as original_display_lng,
                     ST_Y(active_display_coordinates::geometry) as active_display_lat,
                     ST_X(active_display_coordinates::geometry) as active_display_lng,
-                    instagram_url, twitter_url, spotify_url, website_url,
+                    instagram_url, twitter_url, apple_music_url, website_url, youtube_url,
                     created_at, updated_at
             `, values);
 

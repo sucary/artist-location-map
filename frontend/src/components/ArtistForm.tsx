@@ -1,11 +1,15 @@
-import { useState } from 'react';
-import { ChevronDownIcon, ArrowDownIcon, EditIcon } from './Icons/FormIcons';
+import { useState, useRef } from 'react';
+import { ChevronDownIcon, ArrowDownIcon } from './Icons/FormIcons';
 import { HomeIcon, MusicIcon, YoutubeIcon, InstagramIcon, XIcon } from './Icons/SocialIcons';
 import { LocationSearch } from './LocationSearch';
 import SocialLinkInput, { type SocialLinkField } from './SocialLinkInput';
+import ImageCropper, { type CropResult } from './ImageCropper';
+import ArtistFormHeader from './ArtistFormHeader';
 import { useArtistForm, useMapSelectionHandler } from '../hooks/useArtistForm';
+import { getAvatarUrl, getProfileUrl } from '../utils/cloudinaryUrl';
 import type { SearchResult } from '../services/api';
 import type { Artist } from '../types/artist';
+
 
 interface ArtistFormProps {
     initialData?: Artist;
@@ -24,8 +28,6 @@ const SOCIAL_FIELDS: SocialLinkField[] = [
     { key: 'youtube', icon: YoutubeIcon, placeholder: 'YouTube URL' },
 ];
 
-const MAX_NAME_LENGTH = 22;
-
 const ArtistForm = ({
     initialData,
     onSubmit,
@@ -35,13 +37,20 @@ const ArtistForm = ({
     onConsumePendingResult
 }: ArtistFormProps) => {
     const [isSocialExpanded, setIsSocialExpanded] = useState(false);
-    const [isEditingName, setIsEditingName] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [cropperInitialMode, setCropperInitialMode] = useState<'avatar' | 'profile'>('avatar');
+
+    // Cropper state - simplified: just need to know if it's open and have the image
+    const [isCropperOpen, setIsCropperOpen] = useState(false);
+    const [cropperImageSrc, setCropperImageSrc] = useState<string | null>(null);
 
     const {
         formData,
         isSaving,
         error,
         pendingField,
+        isUploadingImage,
+        uploadError,
         handleLocationSelect,
         handleSave,
         copyOriginalToActive,
@@ -49,6 +58,8 @@ const ArtistForm = ({
         clearPendingField,
         updateSocialLink,
         updateName,
+        handleImageUpload,
+        updateCrops,
     } = useArtistForm({
         initialData,
         onSuccess: onSubmit,
@@ -81,61 +92,104 @@ const ArtistForm = ({
         return '';
     };
 
-    const displayName = formData.name && formData.name.length > MAX_NAME_LENGTH
-        ? `${formData.name.substring(0, MAX_NAME_LENGTH)}...`
-        : formData.name;
+    
+    const openCropper = (initialMode: 'avatar' | 'profile') => {
+        setCropperInitialMode(initialMode);
+
+        if (formData.sourceImage) {
+            setCropperImageSrc(formData.sourceImage);
+            setIsCropperOpen(true);
+        } else {
+            fileInputRef.current?.click();
+        }
+    };
+
+    const handleAvatarClick = () => {
+        openCropper('avatar');
+    };
+
+    const handleProfileClick = () => {
+        openCropper('profile');
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Upload to Cloudinary first
+        const imageUrl = await handleImageUpload(file);
+
+        if (imageUrl) {
+            // Open cropper with the uploaded image
+            setCropperImageSrc(imageUrl);
+            setIsCropperOpen(true);
+        }
+
+        // Reset input so same file can be selected again
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
+    const handleCropSave = (result: CropResult) => {
+        updateCrops(result.avatarCrop, result.profileCrop);
+        setIsCropperOpen(false);
+        setCropperImageSrc(null);
+    };
+
+    const handleCropperCancel = () => {
+        setIsCropperOpen(false);
+        setCropperImageSrc(null);
+    };
+
+    // Get display URLs using Cloudinary transformations
+    const avatarUrl = getAvatarUrl(formData.sourceImage, formData.avatarCrop);
+    const profileUrl = getProfileUrl(formData.sourceImage, formData.profileCrop);
 
     return (
-        <div className="absolute top-28 right-4 z-[1000] w-80 bg-white rounded-lg shadow-xl overflow-hidden flex flex-col max-h-[calc(100vh-8rem)] font-sans">
+        <>
+        {/* Hidden file input */}
+        <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handleFileChange}
+            className="hidden"
+        />
+
+        {isCropperOpen && cropperImageSrc && (
+            <ImageCropper
+                imageSrc={cropperImageSrc}
+                initialAvatarCrop={formData.avatarCrop}
+                initialProfileCrop={formData.profileCrop}
+                initialMode={cropperInitialMode}
+                onSave={handleCropSave}
+                onCancel={handleCropperCancel}
+            />
+        )}
+
+        <div className="absolute top-28 right-4 z-modal w-80 bg-white rounded-lg shadow-xl overflow-hidden flex flex-col max-h-[calc(100vh-8rem)] font-sans">
             <div className="overflow-y-auto flex-1">
                 {/* Header with background and avatar */}
-                <div
-                    className="relative w-full h-32 bg-gray-200 bg-cover bg-center"
-                    style={{ backgroundImage: formData.profilePicture ? `url(${formData.profilePicture})` : undefined }}
-                >
-                    <div className="absolute inset-0 bg-black/10 hover:bg-black/20 transition-colors" />
-
-                    {/* Avatar */}
-                    <div className="absolute -bottom-8 left-4 w-20 h-20 rounded-full border-4 border-white bg-gray-300 overflow-hidden z-10 shadow-md group/avatar cursor-pointer">
-                        <img
-                            src={formData.profilePicture || 'https://via.placeholder.com/150'}
-                            alt="Avatar"
-                            className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity">
-                            <EditIcon className="w-6 h-6 text-white" />
-                        </div>
-                    </div>
-
-                    {/* Name */}
-                    <div className="absolute bottom-2 left-28 right-4 z-10">
-                        {isEditingName ? (
-                            <input
-                                type="text"
-                                value={formData.name}
-                                onChange={(e) => updateName(e.target.value)}
-                                onBlur={() => setIsEditingName(false)}
-                                onKeyDown={(e) => e.key === 'Enter' && setIsEditingName(false)}
-                                className="w-full bg-transparent border-b-2 border-white/80 text-lg font-bold text-white outline-none placeholder-white/50 drop-shadow-md p-0 m-0 leading-tight"
-                                style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}
-                                autoFocus
-                                maxLength={MAX_NAME_LENGTH}
-                            />
-                        ) : (
-                            <h2
-                                onClick={() => setIsEditingName(true)}
-                                className="text-lg font-bold text-white drop-shadow-md hover:text-gray-100 whitespace-nowrap overflow-hidden p-0 m-0 leading-tight border-b-2 border-transparent cursor-pointer"
-                                title={formData.name}
-                                style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}
-                            >
-                                {displayName}
-                            </h2>
-                        )}
-                    </div>
-                </div>
+                <ArtistFormHeader
+                    name={formData.name || ''}
+                    avatarUrl={avatarUrl}
+                    profileUrl={profileUrl}
+                    isUploading={isUploadingImage}
+                    onAvatarClick={handleAvatarClick}
+                    onProfileClick={handleProfileClick}
+                    onNameChange={updateName}
+                />
 
                 {/* Form content */}
                 <div className="mt-10 px-4 flex flex-col gap-4">
+                    {/* Upload error */}
+                    {uploadError && (
+                        <div className="p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+                            {uploadError}
+                        </div>
+                    )}
+
                     {/* Location inputs */}
                     <div className="space-y-4">
                         <LocationSearch
@@ -170,8 +224,7 @@ const ArtistForm = ({
                     <div className="border-t border-gray-100 pt-0 mt-0">
                         <button
                             onClick={() => setIsSocialExpanded(!isSocialExpanded)}
-                            className="flex items-center justify-between w-full py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-none px-4 -mx-4 transition-colors"
-                            style={{ width: 'calc(100% + 2rem)' }}
+                            className="flex items-center justify-between w-[calc(100%+2rem)] py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-none px-4 -mx-4 transition-colors"
                             type="button"
                         >
                             <span className="font-semibold text-gray-700">Social Media</span>
@@ -184,7 +237,7 @@ const ArtistForm = ({
                                     <SocialLinkInput
                                         key={field.key}
                                         field={field}
-                                        value={formData.socialLinks?.[field.key as keyof typeof formData.socialLinks] || ''}
+                                        value={formData.socialLinks?.[field.key] || ''}
                                         onChange={updateSocialLink}
                                     />
                                 ))}
@@ -205,7 +258,7 @@ const ArtistForm = ({
                     <button
                         onClick={onCancel}
                         disabled={isSaving}
-                        className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-[#FA2D48] disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
                         type="button"
                     >
                         Cancel
@@ -213,7 +266,7 @@ const ArtistForm = ({
                     <button
                         onClick={handleSave}
                         disabled={isSaving}
-                        className="flex-1 px-4 py-2 text-sm font-medium text-white bg-[#FA2D48] border border-transparent rounded-md hover:bg-[#E11D38] focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 px-4 py-2 text-sm font-medium text-white bg-primary border border-transparent rounded-md hover:bg-primary-hover focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                         type="button"
                     >
                         {isSaving ? 'Saving...' : 'Save'}
@@ -221,6 +274,7 @@ const ArtistForm = ({
                 </div>
             </div>
         </div>
+        </>
     );
 };
 

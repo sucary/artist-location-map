@@ -1,6 +1,7 @@
 import type { Artist, Location } from '../types/artist';
 import { HomeIcon, MusicIcon, YoutubeIcon, InstagramIcon, XIcon } from './Icons/SocialIcons';
 import { EditIcon, TrashIcon } from './Icons/FormIcons';
+import { getProfileUrl } from '../utils/cloudinaryUrl';
 
 interface ArtistProfileProps {
     artist: Artist;
@@ -14,7 +15,14 @@ const formatLocation = (location: Location): string => {
     return parts.join(', ');
 };
 
+// Placeholder for artists without profile picture
+const getPlaceholderUrl = (name: string) =>
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&size=320&background=e5e7eb&color=9ca3af`;
+
 const ArtistProfile = ({ artist }: ArtistProfileProps) => {
+    // Use Cloudinary transformation for profile banner
+    const backgroundImageUrl = getProfileUrl(artist.sourceImage, artist.profileCrop) || getPlaceholderUrl(artist.name);
+    
     return (
         <div className="w-80 flex flex-col rounded-lg bg-white shadow-lg overflow-hidden">
             <style>{`
@@ -31,7 +39,7 @@ const ArtistProfile = ({ artist }: ArtistProfileProps) => {
             {/* Header with cover image */}
             <div
                 className="artist-cover relative w-full h-28 bg-gray-200 bg-cover bg-center"
-                style={{ backgroundImage: artist.profilePicture ? `url(${artist.profilePicture})` : undefined }}
+                style={{ backgroundImage: `url(${backgroundImageUrl})` }}
             >
                 {/* Action bar - shows on hover */}
                 <div

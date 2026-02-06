@@ -66,7 +66,7 @@ const MapClickHandler = ({ onLocationPick }: MapClickHandlerProps) => {
     return (
         <>
             {/* Top banner with instructions */}
-            <div className="absolute top-0 left-0 right-0 z-[999] bg-[#FA2D48] text-white px-4 py-3 shadow-lg">
+            <div className="absolute top-0 left-0 right-0 z-modal bg-primary text-white px-4 py-3 shadow-lg">
                 <div className="max-w-4xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -79,7 +79,7 @@ const MapClickHandler = ({ onLocationPick }: MapClickHandlerProps) => {
                     </div>
                     <button
                         onClick={() => onLocationPick?.(null)}
-                        className="px-4 py-1.5 text-sm bg-white text-[#FA2D48] hover:bg-gray-100 rounded-md font-medium transition-colors"
+                        className="px-4 py-1.5 text-sm bg-white text-primary hover:bg-gray-100 rounded-md font-medium transition-colors"
                         style={{ cursor: 'default' }}
                     >
                         Cancel
@@ -95,7 +95,7 @@ const MapClickHandler = ({ onLocationPick }: MapClickHandlerProps) => {
                 <div className="absolute inset-0 bg-black/20 z-[1000] flex items-center justify-center pointer-events-none">
                     <div className="bg-white rounded-lg p-6 shadow-xl">
                         <div className="flex items-center gap-3">
-                            <div className="animate-spin h-6 w-6 border-3 border-[#FA2D48] border-t-transparent rounded-full" />
+                            <div className="animate-spin h-6 w-6 border-3 border-primary border-t-transparent rounded-full" />
                             <p className="text-sm font-medium text-gray-700">Finding location...</p>
                         </div>
                     </div>

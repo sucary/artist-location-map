@@ -34,3 +34,33 @@
   background: transparent;
   border: none;
 }
+
+/* Image Cropper zoom slider */
+.cropper-zoom-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  outline: none;
+}
+
+.cropper-zoom-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--color-primary-hover);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 6px color-mix(in srgb, var(--color-primary-hover) 50%, transparent);
+}
+
+.cropper-zoom-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: var(--color-primary-hover);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 6px color-mix(in srgb, var(--color-primary-hover) 50%, transparent);
+}

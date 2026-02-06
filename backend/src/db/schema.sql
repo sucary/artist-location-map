@@ -66,7 +66,9 @@ CREATE TABLE IF NOT EXISTS water_polygons (
 CREATE TABLE IF NOT EXISTS artists (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(255) NOT NULL,
-  profile_picture TEXT,
+  source_image TEXT,
+  avatar_crop JSONB,
+  profile_crop JSONB,
 
   original_city VARCHAR(100) NOT NULL,
   original_province VARCHAR(100) NOT NULL,
@@ -83,8 +85,9 @@ CREATE TABLE IF NOT EXISTS artists (
 
   instagram_url TEXT,
   twitter_url TEXT,
-  spotify_url TEXT,
+  apple_music_url TEXT,
   website_url TEXT,
+  youtube_url TEXT,
 
   -- Timestamps
   created_at TIMESTAMP DEFAULT NOW(),

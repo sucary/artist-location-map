@@ -12,7 +12,7 @@ import { CreateArtistDTO } from '../types/artist';
 const sampleArtists: CreateArtistDTO[] = [
     {
         name: "Snooty",
-        profilePicture: undefined,
+        sourceImage: undefined,
         originalLocation: {
             city: "Fukuoka",
             province: "Fukuoka",
@@ -33,7 +33,7 @@ const sampleArtists: CreateArtistDTO[] = [
     },
     {
         name: "Unfair Rule",
-        profilePicture: undefined,
+        sourceImage: undefined,
         originalLocation: {
             city: "Okayama",
             province: "Okayama",
@@ -64,7 +64,7 @@ const dummyCoords = { lat: 0, lng: 0 };
 for (let i = 1; i <= 15; i++) {
     sampleArtists.push({
         name: `Tokyo Artist ${i}`,
-        profilePicture: undefined,
+        sourceImage: undefined,
         originalLocation: {
             city: "Tokyo",
             province: "Tokyo",
@@ -86,7 +86,7 @@ for (let i = 1; i <= 15; i++) {
 for (let i = 1; i <= 15; i++) {
     sampleArtists.push({
         name: `Kawasaki Artist ${i}`,
-        profilePicture: undefined,
+        sourceImage: undefined,
         originalLocation: {
             city: "Kawasaki",
             province: "Kanagawa",

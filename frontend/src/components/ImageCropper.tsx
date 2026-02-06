@@ -1,0 +1,230 @@
+import { useState, useCallback, useRef, useEffect } from 'react';
+import Cropper from 'react-easy-crop';
+import type { Area, Point } from 'react-easy-crop';
+import type { CropArea } from '../types/artist';
+import { ASPECT_RATIOS } from '../constants/artist';
+
+export interface CropResult {
+    avatarCrop: CropArea;
+    profileCrop: CropArea;
+}
+
+interface ImageCropperProps {
+    imageSrc: string; // Source image URL to be cropped
+    initialAvatarCrop?: CropArea;
+    initialProfileCrop?: CropArea;
+    initialMode?: CropMode;
+    onSave: (result: CropResult) => void;
+    onCancel: () => void;
+}
+
+type CropMode = 'avatar' | 'profile';
+
+interface CropState {
+    crop: Point;
+    zoom: number;
+}
+
+/**
+ * Convert Area (from react-easy-crop) to CropArea (our type)
+ */
+const areaToCropArea = (area: Area): CropArea => ({
+    x: area.x,
+    y: area.y,
+    width: area.width,
+    height: area.height,
+});
+
+const INITIAL_CROP_STATE: CropState = {
+    crop: { x: 0, y: 0 },
+    zoom: 1,
+};
+
+const ImageCropper = ({
+    imageSrc,
+    initialAvatarCrop,
+    initialProfileCrop,
+    initialMode = 'avatar',
+    onSave,
+    onCancel
+}: ImageCropperProps) => {
+    const [mode, setMode] = useState<CropMode>(initialMode);
+
+    // Single crop state - resets when switching tabs
+    const [cropState, setCropState] = useState<CropState>({ ...INITIAL_CROP_STATE });
+
+    // Track which crops have been captured (saved when user interacts with that tab)
+    const [avatarCroppedArea, setAvatarCroppedArea] = useState<Area | null>(null);
+    const [profileCroppedArea, setProfileCroppedArea] = useState<Area | null>(null);
+
+    // Switch tab and reset crop state
+    const switchMode = useCallback((newMode: CropMode) => {
+        if (newMode !== mode) {
+            setMode(newMode);
+            setCropState({ ...INITIAL_CROP_STATE });
+        }
+    }, [mode]);
+
+    const onCropChange = useCallback((location: Point) => {
+        setCropState(prev => ({ ...prev, crop: location }));
+    }, []);
+
+    const onZoomChange = useCallback((newZoom: number) => {
+        setCropState(prev => ({ ...prev, zoom: newZoom }));
+    }, []);
+
+    const onCropAreaComplete = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
+        // Save to the appropriate crop area
+        if (mode === 'avatar') {
+            setAvatarCroppedArea(croppedAreaPixels);
+        } else {
+            setProfileCroppedArea(croppedAreaPixels);
+        }
+    }, [mode]);
+
+    const handleReset = useCallback(() => {
+        setCropState({ ...INITIAL_CROP_STATE });
+    }, []);
+
+    // Wheel zoom with non-passive listener to allow preventDefault
+    const cropAreaRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const element = cropAreaRef.current;
+        if (!element) return;
+
+        const handleWheel = (e: WheelEvent) => {
+            e.preventDefault();
+            const delta = -e.deltaY * 0.001;
+            setCropState(prev => ({
+                ...prev,
+                zoom: Math.min(3, Math.max(1, prev.zoom + delta))
+            }));
+        };
+
+        element.addEventListener('wheel', handleWheel, { passive: false });
+        return () => element.removeEventListener('wheel', handleWheel);
+    }, []);
+
+    const handleSave = useCallback(() => {
+        // Use saved crop areas, or fall back to initial crops if provided
+        const avatarCrop = avatarCroppedArea
+            ? areaToCropArea(avatarCroppedArea)
+            : initialAvatarCrop || { x: 0, y: 0, width: 400, height: 400 };
+
+        const profileCrop = profileCroppedArea
+            ? areaToCropArea(profileCroppedArea)
+            : initialProfileCrop || { x: 0, y: 0, width: 800, height: 320 };
+
+        onSave({ avatarCrop, profileCrop });
+    }, [avatarCroppedArea, profileCroppedArea, initialAvatarCrop, initialProfileCrop, onSave]);
+
+    // Check if either crop has been modified
+    const hasChanges = avatarCroppedArea !== null || profileCroppedArea !== null;
+
+    return (
+        <div className="fixed inset-0 z-cropper flex items-center justify-center bg-black/70">
+            <div className="bg-white rounded-lg shadow-xl w-[90vw] max-w-md overflow-hidden">
+                {/* Tabs */}
+                <div className="flex border-b border-gray-200">
+                    <button
+                        type="button"
+                        onClick={() => switchMode('avatar')}
+                        className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+                            mode === 'avatar'
+                                ? 'text-primary border-b-2 border-primary -mb-px'
+                                : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                    >
+                        Avatar
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => switchMode('profile')}
+                        className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+                            mode === 'profile'
+                                ? 'text-primary border-b-2 border-primary -mb-px'
+                                : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                    >
+                        Profile
+                    </button>
+                </div>
+
+                {/* Crop area */}
+                <div ref={cropAreaRef} className="relative h-80 bg-black">
+                    <Cropper
+                        image={imageSrc}
+                        crop={cropState.crop}
+                        zoom={cropState.zoom}
+                        aspect={ASPECT_RATIOS[mode]}
+                        cropShape={mode === 'avatar' ? 'round' : 'rect'}
+                        showGrid={mode === 'profile'}
+                        onCropChange={onCropChange}
+                        onZoomChange={onZoomChange}
+                        onCropComplete={onCropAreaComplete}
+                        zoomSpeed={0.1}
+                        style={{
+                            containerStyle: { backgroundColor: '#000' },
+                            mediaStyle: { backgroundColor: '#000' },
+                        }}
+                    />
+
+                    {/* Right side controls */}
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col items-center gap-3 pointer-events-auto">
+                        <svg className="w-3.5 h-3.5 text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        <input
+                            type="range"
+                            min={1}
+                            max={3}
+                            step={0.01}
+                            value={cropState.zoom}
+                            onChange={(e) => onZoomChange(Number(e.target.value))}
+                            className="cropper-zoom-slider cursor-pointer"
+                            style={{
+                                writingMode: 'vertical-lr',
+                                direction: 'rtl',
+                                width: '4px',
+                                height: '100px',
+                            }}
+                        />
+                        <svg className="w-3.5 h-3.5 text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                        </svg>
+                        <button
+                            onClick={handleReset}
+                            className="mt-1 px-2 py-0.5 rounded text-[10px] font-medium text-white/60 hover:text-white/90 hover:bg-white/10 transition-colors"
+                            type="button"
+                            title="Reset to default"
+                        >
+                            Reset
+                        </button>
+                    </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-3 p-4 border-t border-gray-100">
+                    <button
+                        onClick={onCancel}
+                        className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                        type="button"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleSave}
+                        disabled={!hasChanges}
+                        className="flex-1 px-4 py-2 text-sm font-medium text-white bg-primary border border-transparent rounded-md hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        type="button"
+                    >
+                        Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default ImageCropper;

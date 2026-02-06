@@ -23,9 +23,19 @@ export interface Location {
 export interface SocialLinks {
     instagram?: string;
     twitter?: string;
-    spotify?: string;
+    appleMusic?: string;
     website?: string;
     youtube?: string;
+}
+
+/**
+ * Crop area coordinates for image cropping
+ */
+export interface CropArea {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
 }
 
 /**
@@ -34,9 +44,11 @@ export interface SocialLinks {
 export interface Artist {
     id: string;
     name: string;
-    profilePicture?: string; // currently avatar and background image together
-    originalLocation: Location; // Where artist is from
-    activeLocation: Location; // Where artist is currently based
+    sourceImage?: string;
+    avatarCrop?: CropArea;
+    profileCrop?: CropArea;
+    originalLocation: Location;
+    activeLocation: Location;
     socialLinks?: SocialLinks;
     createdAt: Date | string;
     updatedAt: Date | string;
@@ -51,7 +63,9 @@ export interface Artist {
  */
 export interface CreateArtistDTO {
     name: string;
-    profilePicture?: string;
+    sourceImage?: string;
+    avatarCrop?: CropArea;
+    profileCrop?: CropArea;
     originalLocation: Location;
     activeLocation: Location;
     socialLinks?: SocialLinks;
@@ -72,7 +86,9 @@ export interface StoreArtistDTO extends CreateArtistDTO {
  */
 export interface UpdateArtistDTO {
     name?: string;
-    profilePicture?: string;
+    sourceImage?: string;
+    avatarCrop?: CropArea;
+    profileCrop?: CropArea;
     originalLocation?: Location;
     activeLocation?: Location;
     socialLinks?: SocialLinks;

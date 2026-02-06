@@ -1,1 +1,18 @@
 @import "tailwindcss";
+
+@theme {
+  /* Brand colors */
+  --color-primary: #FA2D48;
+  --color-primary-hover: #E11D38;
+  --color-primary-ring: #FA2D48;
+
+  /* Z-index scale */
+  --z-index-dropdown: 100;
+  --z-index-modal: 1000;
+  --z-index-cropper: 2000;
+}
+
+/* Custom utility for text shadow on image overlays */
+@utility text-shadow-overlay {
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}

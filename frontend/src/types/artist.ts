@@ -31,12 +31,24 @@ export interface SocialLinks {
 }
 
 /**
+ * Crop area coordinates for image cropping
+ */
+export interface CropArea {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+
+/**
  * Complete artist profile
  */
 export interface Artist {
     id: string;
     name: string;
-    profilePicture?: string; // base64 string or URL
+    sourceImage?: string; // Original uploaded image URL
+    avatarCrop?: CropArea; // Crop coordinates for avatar (1:1)
+    profileCrop?: CropArea; // Crop coordinates for profile banner (2.5:1)
     originalLocation: Location; // Where artist is from
     activeLocation: Location; // Where artist is currently based
     originalLocationDisplayCoordinates: Coordinates;

@@ -2,8 +2,10 @@ import { useState, useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { createArtist, updateArtist } from '../services/api';
 import type { SearchResult } from '../services/api';
-import type { Artist } from '../types/artist';
+import type { Artist, CropArea } from '../types/artist';
+import type { SocialLinkKey } from '../constants/artist';
 import { extractLocationData, createEmptyLocation, hasValidCoordinates } from '../utils/locationUtils';
+import { uploadImageToCloudinary } from '../utils/cloudinary';
 
 export interface UseArtistFormOptions {
     initialData?: Artist;
@@ -25,9 +27,15 @@ export interface UseArtistFormReturn {
     startManualPinSelection: (field: 'originalLocation' | 'activeLocation') => void;
     clearPendingField: () => void;
     clearError: () => void;
-    updateSocialLink: (key: string, value: string) => void;
+    updateSocialLink: (key: SocialLinkKey, value: string) => void;
     updateName: (name: string) => void;
-    updateProfilePicture: (url: string) => void;
+
+    // Image handling
+    isUploadingImage: boolean;
+    uploadError: string | null;
+    clearUploadError: () => void;
+    handleImageUpload: (file: File) => Promise<string | null>;
+    updateCrops: (avatarCrop: CropArea, profileCrop: CropArea) => void;
 
     isEditing: boolean;
 }
@@ -37,7 +45,9 @@ const createInitialFormData = (initialData?: Artist): Partial<Artist> => {
 
     return {
         name: 'New Artist',
-        profilePicture: '',
+        sourceImage: '',
+        avatarCrop: undefined,
+        profileCrop: undefined,
         originalLocation: createEmptyLocation(),
         activeLocation: createEmptyLocation(),
         socialLinks: {}
@@ -55,11 +65,14 @@ export const useArtistForm = ({
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [pendingField, setPendingField] = useState<'originalLocation' | 'activeLocation' | null>(null);
+    const [isUploadingImage, setIsUploadingImage] = useState(false);
+    const [uploadError, setUploadError] = useState<string | null>(null);
 
     const isEditing = Boolean(initialData?.id);
 
     const clearError = useCallback(() => setError(null), []);
     const clearPendingField = useCallback(() => setPendingField(null), []);
+    const clearUploadError = useCallback(() => setUploadError(null), []);
 
     const handleLocationSelect = useCallback((
         result: SearchResult,
@@ -84,7 +97,7 @@ export const useArtistForm = ({
         setPendingField(field);
     }, []);
 
-    const updateSocialLink = useCallback((key: string, value: string) => {
+    const updateSocialLink = useCallback((key: SocialLinkKey, value: string) => {
         setFormData(prev => ({
             ...prev,
             socialLinks: { ...prev.socialLinks, [key]: value }
@@ -95,8 +108,35 @@ export const useArtistForm = ({
         setFormData(prev => ({ ...prev, name }));
     }, []);
 
-    const updateProfilePicture = useCallback((url: string) => {
-        setFormData(prev => ({ ...prev, profilePicture: url }));
+    // Upload image to Cloudinary and return the URL
+    const handleImageUpload = useCallback(async (file: File): Promise<string | null> => {
+        setIsUploadingImage(true);
+        setUploadError(null);
+
+        try {
+            const imageUrl = await uploadImageToCloudinary(file);
+            setFormData(prev => ({
+                ...prev,
+                sourceImage: imageUrl
+            }));
+            return imageUrl;
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to upload image';
+            setUploadError(errorMessage);
+            console.error('Image upload error:', err);
+            return null;
+        } finally {
+            setIsUploadingImage(false);
+        }
+    }, []);
+
+    // Update crop coordinates
+    const updateCrops = useCallback((avatarCrop: CropArea, profileCrop: CropArea) => {
+        setFormData(prev => ({
+            ...prev,
+            avatarCrop,
+            profileCrop
+        }));
     }, []);
 
     const validateForm = useCallback((): string | null => {
@@ -163,6 +203,8 @@ export const useArtistForm = ({
         isSaving,
         error,
         pendingField,
+        isUploadingImage,
+        uploadError,
         handleLocationSelect,
         handleSave,
         copyOriginalToActive,
@@ -171,7 +213,9 @@ export const useArtistForm = ({
         clearError,
         updateSocialLink,
         updateName,
-        updateProfilePicture,
+        handleImageUpload,
+        clearUploadError,
+        updateCrops,
         isEditing
     };
 };
