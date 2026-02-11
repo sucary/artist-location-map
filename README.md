@@ -17,40 +17,43 @@ This application tracks two locations per artist: their original location (homet
 - **OSM ID-based city search** with fuzzy matching
 - **Nominatim API integration** for geocoding and GeoJSON city boundary retrieval
 - **Randomized display coordinates** within city boundaries using `ST_GeneratePoints`
-- Two views for original location and current location
+- **View toggle** for switching between original and active locations
+- **Supabase authentication** with email/password sign-in and user management
+- **Image upload** with cropping support via Cloudinary
+- **Artist clustering** with marker clustering for better map visualization
+- **Interactive location selection** - click on map to pick locations
 - RESTful API with filtering by name, city, and province
 
 **Planned:**
-- Authentication and admin dashboard for managing content
 - A search engine for artists and cities
-- Image upload and adjustment service
 - More advanced artist filtering on UI level
-- Refined visual and interaction
 
 ## Current State
 
-Not deployed to production. Requires environment configuration and authentication implementation for production use.
+Not deployed to production. Requires environment configuration for production use.
 
-The full application will be containerized with Docker when ready for production. Currently, only the database is containerized using Docker Compose.
-
-The application is functional in development. It includes a REST API with CRUD endpoints, PostgreSQL database with PostGIS, and a React frontend with Leaflet map integration. The Nominatim API is used for geocoding city names to coordinates and retrieving GeoJSON city boundaries.
+The database is hosted on Supabase, and is accessible via Supabase Auth.
 
 ## Core Technology Stack
 
 - **Backend:** Node.js, Express.js, TypeScript
-- **Database:** PostgreSQL with PostGIS extension
+- **Database:** PostgreSQL with PostGIS extension, Supabase
 - **Frontend:** React, TypeScript, Vite
 - **Styling:** Tailwind CSS
-- **Maps:** Leaflet with leaflet.markercluster
+- **Maps:** Leaflet
+- **Authentication:** Supabase Auth
+- **Image Storage:** Cloudinary
 - **Testing:** Vitest, Docker
-- **External APIs:** Nominatim (OpenStreetMap) for geocoding
+- **External APIs:** Nominatim
 
 ## Architecture
 
 - **Controller-Service-Store Pattern:** HTTP layer, business logic, and data access are separated into distinct layers
+- **Auth Middleware:** Supabase JWT verification for protected routes (create, update, delete)
 - **PostGIS Spatial Queries:** Uses `ST_GeneratePoints` for coordinate randomization, `ST_MakePoint` for geography points, and GIST indexes for spatial searches
 - **Dual Coordinate System:** Stores actual city centers (from Nominatim) and randomized display coordinates (generated within city boundary polygons) separately
 - **Database Schema:** Two tables (`artists` and `city_boundaries`) with PostGIS geography types and foreign key references
+- **Frontend State:** React Query for server state, React Context for auth state
 
 
 
@@ -59,130 +62,44 @@ The application is functional in development. It includes a REST API with CRUD e
 
 ### Prerequisites
 - Node.js (v18+)
-- Docker and Docker Compose
 
-### Installation
+### Setup
 
-1. **Clone the repository**
+1. **Clone and install dependencies**
    ```bash
    git clone <repository-url>
    cd artist-location-map
+
+   cd backend && npm install
+   cd ../frontend && npm install
    ```
 
 2. **Environment Setup**
-   ```bash
-   # Create root .env file for Docker
-   cat > .env << EOF
-   DB_PASSWORD=your_secure_password
-   EOF
 
-   # Create backend .env file
-   cat > backend/.env << EOF
-   DB_USER=postgres
-   DB_HOST=localhost
-   DB_NAME=artist_map
-   DB_PASSWORD=your_secure_password
-   DB_PORT=5432
+   Create `backend/.env`:
+   ```
    PORT=3000
    NODE_ENV=development
-   EOF
+   SUPABASE_URL=your_supabase_url
+   SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
    ```
 
-3. **Database Setup**
+   Create `frontend/.env`:
+   ```
+   VITE_SUPABASE_URL=your_supabase_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   VITE_CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+   VITE_CLOUDINARY_UPLOAD_PRESET=your_cloudinary_upload_preset
+   ```
+
+3. **Run the application**
    ```bash
-   # Start PostgreSQL with PostGIS in Docker
-   docker-compose up -d
+   # Terminal 1 - Backend
+   cd backend && npm run dev  # http://localhost:3000
 
-   # Wait for database to be ready
-   docker-compose ps
-
-   # Initialize schema, import ocean data, and seed
-   cd backend
-   npm install
-   npm run db:setup
-
+   # Terminal 2 - Frontend
+   cd frontend && npm run dev  # http://localhost:5173
    ```
-
-   ```bash
-   # If you entcounter problems while setting up the databse, try to disable local PG service
-   net stop postgresql-x64-18
-   
-   # then retry setting up the database
-   npm run db:setup
-   ```
-
-4. **Frontend Setup**
-   ```bash
-   cd ../frontend
-   npm install
-   ```
-
-### Running the Application
-
-1. **Start Docker Database** (if not already running)
-   ```bash
-   docker-compose up -d
-   ```
-
-2. **Start Backend**
-   ```bash
-   cd backend
-   npm run dev  # Runs on http://localhost:3000
-   ```
-
-3. **Start Frontend**
-   ```bash
-   cd frontend
-   npm run dev  # Runs on http://localhost:5173
-   ```
-
-4. **Access the application**
-   - Open your browser to `http://localhost:5173`
-   - The map should load with seeded artists
-
-## Testing
-
-### Automated Tests (Vitest)
-
-The project includes Vitest for backend testing with a test database running in Docker:
-
-```bash
-cd backend
-
-# Start test database in Docker (port 5433)
-npm run test:db:up
-
-# Run test suite
-npm test
-
-# Stop test database
-npm run test:db:down
-```
-
-### Manual API Testing
-
-Test API endpoints interactively without hitting Nominatim rate limits:
-
-```bash
-# Ensure Docker database is running
-docker-compose up -d
-
-# Start backend
-npm run dev
-
-# In another terminal, run manual tests
-npm run test:api
-```
-
-### Database Inspection
-
-```bash
-# View all artists
-npm run inspect:db artists
-
-# View all cities
-npm run inspect:db cities
-```
 
 
 ## API Endpoints
