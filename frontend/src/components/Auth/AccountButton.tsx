@@ -1,0 +1,35 @@
+import { useAuth } from '../../context/AuthContext';
+import { AuthModal } from './AuthModal';
+import { UserMenu } from './UserMenu';
+
+interface AccountButtonProps {
+    showAuthModal: boolean;
+    onOpenAuthModal: () => void;
+    onCloseAuthModal: () => void;
+}
+
+export function AccountButton({ showAuthModal, onOpenAuthModal, onCloseAuthModal }: AccountButtonProps) {
+    const { user, loading } = useAuth();
+
+    if (loading) {
+        return null;
+    }
+
+    return (
+        <>
+            <div className="absolute top-2 right-2 z-[1100]">
+                {user ? (
+                    <UserMenu />
+                ) : (
+                    <button
+                        onClick={onOpenAuthModal}
+                        className="px-4 py-2 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow text-sm font-medium text-gray-700"
+                    >
+                        Sign In
+                    </button>
+                )}
+            </div>
+            <AuthModal isOpen={showAuthModal} onClose={onCloseAuthModal} />
+        </>
+    );
+}

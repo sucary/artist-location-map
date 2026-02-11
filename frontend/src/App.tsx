@@ -5,14 +5,13 @@ import { checkHealth, deleteArtist, type SearchResult } from './services/api';
 import MapView from './components/Map/MapView';
 import ArtistForm from './components/ArtistForm';
 import AddArtistButton from './components/Map/buttons/AddArtistButton';
-import { AuthModal } from './components/Auth/AuthModal';
-import { UserMenu } from './components/Auth/UserMenu';
+import { AccountButton } from './components/Auth/AccountButton';
 import { useAuth } from './context/AuthContext';
 import type { Artist, SelectionMode } from './types/artist';
 
 function App() {
     const queryClient = useQueryClient();
-    const { user, loading: authLoading } = useAuth();
+    const { user } = useAuth();
     const [status, setStatus] = useState<string>('Checking connection...');
     const [showForm, setShowForm] = useState(false);
     const [showAuthModal, setShowAuthModal] = useState(false);
@@ -118,24 +117,11 @@ function App() {
                 </div>
             </div>
 
-            {/* Auth UI - top right */}
-            <div className="absolute top-2 right-2 z-[1000]">
-                {!authLoading && (
-                    user ? (
-                        <UserMenu />
-                    ) : (
-                        <button
-                            onClick={() => setShowAuthModal(true)}
-                            className="px-4 py-2 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow text-sm font-medium text-gray-700"
-                        >
-                            Sign In
-                        </button>
-                    )
-                )}
-            </div>
-
-            {/* Auth Modal */}
-            <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+            <AccountButton
+                showAuthModal={showAuthModal}
+                onOpenAuthModal={() => setShowAuthModal(true)}
+                onCloseAuthModal={() => setShowAuthModal(false)}
+            />
 
             {!showForm && <AddArtistButton onClick={handleAddArtistClick} />}
             {showForm && (
@@ -153,6 +139,7 @@ function App() {
                 onLocationPick={handleLocationPick}
                 onEditArtist={handleEditArtist}
                 onDeleteArtist={handleDeleteArtist}
+                onEmptyClick={showForm ? handleCloseForm : undefined}
             />
         </div>
     );

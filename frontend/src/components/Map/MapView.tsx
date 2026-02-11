@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
-import { MapContainer, TileLayer, ZoomControl, GeoJSON } from 'react-leaflet';
+import { useEffect, useMemo, useCallback, useState } from 'react';
+import { MapContainer, TileLayer, ZoomControl, GeoJSON, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { LatLngExpression } from 'leaflet';
 import { getArtists, getCityById, type SearchResult } from '../../services/api';
@@ -11,14 +11,39 @@ import ViewToggleButton from './buttons/ViewToggleButton';
 import MapClickHandler from './MapClickHandler';
 import { useQuery } from '@tanstack/react-query';
 
+// Component to handle clicks on empty map areas
+const MapEmptyClickHandler = ({ onClick }: { onClick: () => void }) => {
+    useMapEvents({
+        click: (e) => {
+            const target = (e.originalEvent as any)?.target;
+            if (target) {
+                // Ignore clicks on following elements
+                const isInteractive = target.closest('.leaflet-control') ||
+                    target.closest('.leaflet-bar') ||
+                    target.closest('button') ||
+                    target.closest('.leaflet-marker-icon') ||
+                    target.closest('.marker-cluster') ||
+                    target.closest('.leaflet-popup');
+
+                if (isInteractive) {
+                    return;
+                }
+            }
+            onClick();
+        }
+    });
+    return null;
+};
+
 interface MapViewProps {
     selectionMode?: SelectionMode | null;
     onLocationPick?: ((result: SearchResult | null) => void) | null;
     onEditArtist?: (artist: Artist) => void;
     onDeleteArtist?: (artist: Artist) => void;
+    onEmptyClick?: () => void;
 }
 
-const MapView = ({ selectionMode, onLocationPick, onEditArtist, onDeleteArtist }: MapViewProps) => {
+const MapView = ({ selectionMode, onLocationPick, onEditArtist, onDeleteArtist, onEmptyClick }: MapViewProps) => {
     const defaultCenter: LatLngExpression = [35.6762, 139.6503]; // Tokyo
     const defaultZoom = 4;
     const [view, setView] = useState<LocationView>('active');
@@ -74,7 +99,9 @@ const MapView = ({ selectionMode, onLocationPick, onEditArtist, onDeleteArtist }
             className="h-full w-full"
             zoomControl={false}
         >
-            <ViewToggleButton view={view} setView={setView} />
+            <div className="absolute bottom-7 right-14 z-[1000]">
+                <ViewToggleButton view={view} setView={setView} />
+            </div>
             <ZoomControl position="bottomright" />
             <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -91,6 +118,9 @@ const MapView = ({ selectionMode, onLocationPick, onEditArtist, onDeleteArtist }
             />
             {selectionMode?.active && (
                 <MapClickHandler onLocationPick={onLocationPick ?? null} />
+            )}
+            {!selectionMode?.active && onEmptyClick && (
+                <MapEmptyClickHandler onClick={onEmptyClick} />
             )}
             {selectedCity && selectedCity.boundary && (
                 <GeoJSON
