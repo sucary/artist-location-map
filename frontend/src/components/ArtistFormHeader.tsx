@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { EditIcon } from './Icons/FormIcons';
 import { MAX_NAME_LENGTH } from '../constants/artist';
 
@@ -25,6 +25,7 @@ const ArtistFormHeader = ({
 }: ArtistFormHeaderProps) => {
     const [isEditingName, setIsEditingName] = useState(false);
     const [hoverTarget, setHoverTarget] = useState<HoverTarget>(null);
+    const mouseDownPos = useRef<{ x: number; y: number } | null>(null);
 
     const displayName = name.length > MAX_NAME_LENGTH
         ? `${name.substring(0, MAX_NAME_LENGTH)}...`
@@ -32,11 +33,45 @@ const ArtistFormHeader = ({
 
     const placeholderUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'New Artist')}&size=150&background=e5e7eb&color=9ca3af`;
 
+    const handleProfileClick = (e: React.MouseEvent) => {
+        if (mouseDownPos.current) {
+            const dx = e.clientX - mouseDownPos.current.x;
+            const dy = e.clientY - mouseDownPos.current.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            // If mouse moved more than 5 pixels, it's a drag, not a click
+            // Prevents accidental clicks when trying to drag the name
+            if (distance > 5) {
+                mouseDownPos.current = null;
+                return;
+            }
+        }
+        onProfileClick();
+        mouseDownPos.current = null;
+    };
+
+    const handleAvatarClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (mouseDownPos.current) {
+            const dx = e.clientX - mouseDownPos.current.x;
+            const dy = e.clientY - mouseDownPos.current.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance > 5) {
+                mouseDownPos.current = null;
+                return;
+            }
+        }
+        onAvatarClick();
+        mouseDownPos.current = null;
+    };
+
     return (
         <div
             className="relative w-full h-32 bg-gray-200 bg-cover bg-center group/profile cursor-pointer"
             style={{ backgroundImage: profileUrl ? `url(${profileUrl})` : undefined }}
-            onClick={onProfileClick}
+            onMouseDown={(e) => mouseDownPos.current = { x: e.clientX, y: e.clientY }}
+            onClick={handleProfileClick}
         >
             {/* Hover overlay */}
             <div className={`absolute inset-0 bg-black/10 transition-colors flex items-center justify-center ${!hoverTarget ? 'group-hover/profile:bg-black/30' : ''}`}>
@@ -46,7 +81,8 @@ const ArtistFormHeader = ({
             {/* Avatar */}
             <div
                 className="absolute -bottom-8 left-4 w-20 h-20 rounded-full border-4 border-white bg-gray-300 overflow-hidden z-10 shadow-md group/avatar cursor-pointer"
-                onClick={(e) => { e.stopPropagation(); onAvatarClick(); }}
+                onMouseDown={(e) => mouseDownPos.current = { x: e.clientX, y: e.clientY }}
+                onClick={handleAvatarClick}
                 onMouseEnter={() => setHoverTarget('avatar')}
                 onMouseLeave={() => setHoverTarget(null)}
             >
