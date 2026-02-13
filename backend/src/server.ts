@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import artistRoutes from './routes/artistRoutes';
 import cityRoutes from './routes/cityRoutes';
+import authRoutes from './routes/authRoutes';
 import { errorHandler } from './middleware/errorHandler';
 import { verifyDatabaseConnection } from './config/database';
 
@@ -35,6 +36,7 @@ app.use(express.json());
 
 app.use('/api/artists', artistRoutes);
 app.use('/api/cities', cityRoutes);
+app.use('/api/auth', authRoutes);
 
 app.get('/api/health', (req: Request, res: Response) => {
     res.json({

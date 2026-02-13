@@ -10,6 +10,9 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
     const [isSignUp, setIsSignUp] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [username, setUsername] = useState('');
+    const [usernameError, setUsernameError] = useState<string | null>(null);
+    const [checkingUsername, setCheckingUsername] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
@@ -17,6 +20,38 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
     const { signIn, signUp, signInWithGoogle, signInWithGitHub } = useAuth();
 
     if (!isOpen) return null;
+
+    const validateUsername = (value: string): boolean => {
+        if (value.length < 3) {
+            setUsernameError('Username must be at least 3 characters');
+            return false;
+        }
+        if (!/^[a-zA-Z0-9_]+$/.test(value)) {
+            setUsernameError('Username can only contain letters, numbers, and underscores');
+            return false;
+        }
+        setUsernameError(null);
+        return true;
+    };
+
+    const checkUsernameAvailability = async (username: string) => {
+        if (!validateUsername(username)) return;
+
+        setCheckingUsername(true);
+        try {
+            const response = await fetch(
+                `http://localhost:3000/api/auth/check-username?username=${encodeURIComponent(username)}`
+            );
+            const data = await response.json();
+            if (!data.available) {
+                setUsernameError('Username already taken');
+            }
+        } catch (error) {
+            console.error('Failed to check username:', error);
+        } finally {
+            setCheckingUsername(false);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -26,11 +61,18 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
         try {
             if (isSignUp) {
-                const { error } = await signUp(email, password);
+                // Validate username
+                if (!username || !validateUsername(username)) {
+                    setError('Please enter a valid username');
+                    setLoading(false);
+                    return;
+                }
+
+                const { error } = await signUp(email, password, username);
                 if (error) {
                     setError(error.message);
                 } else {
-                    setMessage('Check your email for the confirmation link!');
+                    setMessage('Registration successful! Check your email for confirmation.');
                 }
             } else {
                 const { error } = await signIn(email, password);
@@ -135,6 +177,37 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                             required
                         />
                     </div>
+
+                    {isSignUp && (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Username
+                            </label>
+                            <input
+                                type="text"
+                                value={username}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    setUsername(value);
+                                    if (value.length >= 3) {
+                                        setTimeout(() => checkUsernameAvailability(value), 500);
+                                    }
+                                }}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                placeholder="username"
+                                required
+                            />
+                            {checkingUsername && (
+                                <p className="text-xs text-gray-500 mt-1">Checking availability...</p>
+                            )}
+                            {usernameError && (
+                                <p className="text-xs text-red-500 mt-1">{usernameError}</p>
+                            )}
+                            {!usernameError && username && !checkingUsername && username.length >= 3 && (
+                                <p className="text-xs text-green-600 mt-1">✓ Username available!</p>
+                            )}
+                        </div>
+                    )}
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">

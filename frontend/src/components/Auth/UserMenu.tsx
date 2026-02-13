@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 
 export function UserMenu() {
-    const { user, signOut } = useAuth();
+    const { user, profile, signOut } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -17,15 +17,14 @@ export function UserMenu() {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    if (!user) return null;
+    if (!user || !profile) return null;
 
     const handleSignOut = async () => {
         await signOut();
         setIsOpen(false);
     };
 
-    // Get display name from email
-    const displayName = user.email?.split('@')[0] || 'User';
+    const displayName = profile.username || user.email?.split('@')[0] || 'User';
 
     return (
         <div ref={menuRef} className="relative">
@@ -52,10 +51,23 @@ export function UserMenu() {
 
             {/* Dropdown */}
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-[1001]">
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-[1001]">
                     <div className="px-4 py-2 border-b border-gray-100">
                         <p className="text-sm text-gray-500">Signed in as</p>
-                        <p className="text-sm font-medium text-gray-900 truncate">{user.email}</p>
+                        {profile.username ? (
+                            <>
+                                <p className="text-sm font-medium text-gray-900 truncate">
+                                    {profile.username}
+                                </p>
+                                <p className="text-xs text-gray-400 truncate mt-0.5">
+                                    {user.email}
+                                </p>
+                            </>
+                        ) : (
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                                {user.email}
+                            </p>
+                        )}
                     </div>
                     <button
                         onClick={handleSignOut}

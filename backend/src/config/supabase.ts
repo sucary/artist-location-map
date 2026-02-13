@@ -11,7 +11,7 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function verifySupabaseConnection() {
     try {
-        const { data, error } = await supabaseAdmin.auth.getUser();
+        const { error } = await supabaseAdmin.auth.getUser();
         if (error && error.message !== 'invalid claim: missing sub claim') {
             // This error is expected when no user token is provided
             console.log('Supabase Auth: Connected');

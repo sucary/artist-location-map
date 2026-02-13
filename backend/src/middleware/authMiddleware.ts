@@ -74,7 +74,7 @@ export async function optionalAuth(
                 email: user.email || ''
             };
         }
-    } catch (error) {
+    } catch {
         // Silently continue without user
     }
 
