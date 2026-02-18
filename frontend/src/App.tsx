@@ -98,7 +98,9 @@ function App() {
 
             {user && profile && !profile.isApproved && <ApprovalPending />}
 
-            {!showForm && <AddArtistButton onClick={handleAddArtistClick} />}
+            {!showForm && user && profile?.isApproved && (
+                <AddArtistButton onClick={handleAddArtistClick} />
+            )}
             {showForm && (
                 <ArtistForm
                     key={editingArtist?.id ?? 'new'}
