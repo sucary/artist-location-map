@@ -164,7 +164,10 @@ export const CityService = {
                 osmType: item.osm_type,
                 lat: parseFloat(item.lat),
                 lng: parseFloat(item.lon),
-                type: item.type,
+                // Use addresstype for administrative boundaries (shows "city", "state", etc.)
+                type: item.type === 'administrative' && item.addresstype
+                    ? item.addresstype
+                    : item.type,
                 class: item.class,
                 importance: item.importance,
                 address: item.address as Record<string, string>,

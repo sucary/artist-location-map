@@ -182,7 +182,7 @@ const ArtistForm = ({
                 />
 
                 {/* Form content */}
-                <div className="mt-10 px-4 flex flex-col gap-4">
+                <div className="mt-10 px-4 pb-2 flex flex-col gap-4">
                     {/* Upload error */}
                     {uploadError && (
                         <div className="p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">

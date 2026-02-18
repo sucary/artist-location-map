@@ -41,6 +41,7 @@ export interface NominatimResponse {
     display_name: string;
     class: string;
     type: string;
+    addresstype?: string;
     importance: number;
     geojson?: {
         type: "MultiPolygon" | "Polygon";
