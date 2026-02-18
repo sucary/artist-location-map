@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import type { Profile } from '../types/profile';
 
@@ -19,16 +20,32 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [user, setUser] = useState<User | null>(null);
     const [session, setSession] = useState<Session | null>(null);
     const [loading, setLoading] = useState(true);
-    const [profile, setProfile] = useState<Profile | null>(null);
+    const queryClient = useQueryClient();
+
+    const user = session?.user ?? null;
+
+    // Profile fetching
+    const { data: profile = null } = useQuery({
+        queryKey: ['profile', user?.id],
+        queryFn: async () => {
+            if (!session) return null;
+            const response = await fetch('http://localhost:3000/api/auth/profile', {
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`,
+                },
+            });
+            if (!response.ok) return null;
+            return response.json() as Promise<Profile>;
+        },
+        enabled: !!user,
+    });
 
     useEffect(() => {
         // Get initial session
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
-            setUser(session?.user ?? null);
             setLoading(false);
         });
 
@@ -36,21 +53,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             (_event, session) => {
                 setSession(session);
-                setUser(session?.user ?? null);
                 setLoading(false);
             }
         );
 
         return () => subscription.unsubscribe();
     }, []);
-
-    useEffect(() => {
-        if (user) {
-            fetchProfile();
-        } else {
-            setProfile(null);
-        }
-    }, [user]);
 
     const signIn = async (email: string, password: string, rememberMe = true) => {
         // Set storage mode BEFORE login so custom storage adapter uses the right storage
@@ -84,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const signOut = async () => {
         await supabase.auth.signOut();
         sessionStorage.removeItem('session-only');
+        queryClient.removeQueries({ queryKey: ['profile'] });
     };
 
     const signInWithGoogle = async () => {
@@ -102,26 +111,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 redirectTo: window.location.origin,
             },
         });
-    };
-
-    const fetchProfile = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
-
-        try {
-            const response = await fetch('http://localhost:3000/api/auth/profile', {
-                headers: {
-                    'Authorization': `Bearer ${session.access_token}`,
-                },
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                setProfile(data);
-            }
-        } catch (error) {
-            console.error('Failed to fetch profile:', error);
-        }
     };
 
     const value = {
