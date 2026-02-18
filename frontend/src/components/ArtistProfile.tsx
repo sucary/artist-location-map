@@ -15,6 +15,19 @@ const formatLocation = (location: Location): string => {
     return parts.join(', ');
 };
 
+// URL sanitizer
+const safeUrl = (url: string): string => {
+    const trimmed = url.trim().toLowerCase();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+        return url;
+    }
+    // Auto-prepend https:// for lazy users
+    if (trimmed.includes('.') && !trimmed.includes(':')) {
+        return `https://${url.trim()}`;
+    }
+    return '#';
+};
+
 // Placeholder for artists without profile picture
 const getPlaceholderUrl = (name: string) =>
     `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&size=320&background=e5e7eb&color=9ca3af`;
@@ -105,27 +118,27 @@ const ArtistProfile = ({ artist }: ArtistProfileProps) => {
                     <span className="text-sm text-gray-500">Links</span>
                     <div className="flex gap-1">
                         {artist.socialLinks?.website && (
-                            <a href={artist.socialLinks.website} target="_blank" rel="noopener noreferrer" className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#E53935] transition-colors">
+                            <a href={safeUrl(artist.socialLinks.website)} target="_blank" rel="noopener noreferrer" className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#E53935] transition-colors">
                                 <HomeIcon className="w-5 h-5" />
                             </a>
                         )}
                         {artist.socialLinks?.appleMusic && (
-                            <a href={artist.socialLinks.appleMusic} target="_blank" rel="noopener noreferrer" className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#E53935] transition-colors">
+                            <a href={safeUrl(artist.socialLinks.appleMusic)} target="_blank" rel="noopener noreferrer" className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#E53935] transition-colors">
                                 <MusicIcon className="w-5 h-5" />
                             </a>
                         )}
                         {artist.socialLinks?.youtube && (
-                            <a href={artist.socialLinks.youtube} target="_blank" rel="noopener noreferrer" className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#E53935] transition-colors">
+                            <a href={safeUrl(artist.socialLinks.youtube)} target="_blank" rel="noopener noreferrer" className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#E53935] transition-colors">
                                 <YoutubeIcon className="w-5 h-5" />
                             </a>
                         )}
                         {artist.socialLinks?.instagram && (
-                            <a href={artist.socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#E53935] transition-colors">
+                            <a href={safeUrl(artist.socialLinks.instagram)} target="_blank" rel="noopener noreferrer" className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#E53935] transition-colors">
                                 <InstagramIcon className="w-5 h-5" />
                             </a>
                         )}
                         {artist.socialLinks?.twitter && (
-                            <a href={artist.socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#E53935] transition-colors">
+                            <a href={safeUrl(artist.socialLinks.twitter)} target="_blank" rel="noopener noreferrer" className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#E53935] transition-colors">
                                 <XIcon className="w-5 h-5" />
                             </a>
                         )}
