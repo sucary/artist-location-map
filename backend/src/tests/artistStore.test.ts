@@ -22,6 +22,7 @@ describe('ArtistStore', () => {
     let osakaId: string;
     let kyotoId: string;
     let yokohamaId: string;
+    let testUserId: string;
 
     // Create dummy cities
     const createCity = async (name: string, province: string, lat: number, lng: number, osmId: number) => {
@@ -45,9 +46,12 @@ describe('ArtistStore', () => {
         osakaId = await createCity('Osaka', 'Osaka', 34.6937, 135.5023, 1000002);
         kyotoId = await createCity('Kyoto', 'Kyoto', 35.0116, 135.7681, 1000003);
         yokohamaId = await createCity('Yokohama', 'Kanagawa', 35.4437, 139.6380, 1000004);
+        // Use a fixed UUID for test user
+        testUserId = '00000000-0000-0000-0000-000000000001';
     });
 
     const getTestArtist = () => ({
+        userId: testUserId,
         name: 'Test Artist',
         originalLocation: {
             city: 'Tokyo',

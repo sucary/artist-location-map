@@ -2,7 +2,7 @@ import { useEffect, useMemo, useCallback, useState } from 'react';
 import { MapContainer, TileLayer, GeoJSON, ScaleControl, AttributionControl, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { LatLngExpression } from 'leaflet';
-import { getArtists, getCityById, type SearchResult } from '../../services/api';
+import { getArtists, getArtistsByUsername, getCityById, type SearchResult } from '../../services/api';
 import type { Artist, LocationView, SelectionMode } from '../../types/artist';
 import { getDisplayArtists } from '../../utils/mapUtils';
 import MapControls from './buttons/MapControls';
@@ -35,6 +35,7 @@ const MapEmptyClickHandler = ({ onClick }: { onClick: () => void }) => {
 };
 
 interface MapViewProps {
+    username?: string;
     selectionMode?: SelectionMode | null;
     onLocationPick?: ((result: SearchResult | null) => void) | null;
     onEditArtist?: (artist: Artist) => void;
@@ -42,15 +43,15 @@ interface MapViewProps {
     onEmptyClick?: () => void;
 }
 
-const MapView = ({ selectionMode, onLocationPick, onEditArtist, onDeleteArtist, onEmptyClick }: MapViewProps) => {
+const MapView = ({ username, selectionMode, onLocationPick, onEditArtist, onDeleteArtist, onEmptyClick }: MapViewProps) => {
     const defaultCenter: LatLngExpression = [35.6762, 139.6503]; // Tokyo
     const defaultZoom = 4;
     const [view, setView] = useState<LocationView>('active');
     const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
 
     const {data: artists, isLoading} = useQuery({
-        queryKey: ['artists'],
-        queryFn: () => getArtists(),
+        queryKey: ['artists', username],
+        queryFn: () => username ? getArtistsByUsername(username) : getArtists(),
     });
 
     const { data: selectedCity } = useQuery({

@@ -7,8 +7,26 @@ export interface AuthUser {
     email: string;
 }
 
+export interface AuthProfile {
+    isAdmin: boolean;
+    isApproved: boolean;
+}
+
 export interface AuthenticatedRequest extends Request {
     user?: AuthUser;
+    profile?: AuthProfile;
+}
+
+async function fetchProfile(userId: string): Promise<AuthProfile> {
+    const result = await pool.query(
+        `SELECT is_admin, is_approved FROM profiles WHERE id = $1`,
+        [userId]
+    );
+    const row = result.rows[0];
+    return {
+        isAdmin: row?.is_admin ?? false,
+        isApproved: row?.is_approved ?? false
+    };
 }
 
 /**
@@ -42,6 +60,8 @@ export async function requireAuth(
             email: user.email || ''
         };
 
+        req.profile = await fetchProfile(user.id);
+
         next();
     } catch (error) {
         console.error('Auth middleware error:', error);
@@ -74,6 +94,8 @@ export async function optionalAuth(
                 id: user.id,
                 email: user.email || ''
             };
+
+            req.profile = await fetchProfile(user.id);
         }
     } catch {
         // Silently continue without user
@@ -91,29 +113,15 @@ export async function requireApproval(
     res: Response,
     next: NextFunction
 ) {
-    const userId = req.user!.id;
-
-    try {
-        const result = await pool.query(
-            `SELECT is_approved FROM profiles WHERE id = $1`,
-            [userId]
-        );
-
-        const profile = result.rows[0];
-
-        if (!profile || !profile.is_approved) {
-            res.status(403).json({
-                error: 'Account pending approval',
-                message: 'Your account is awaiting admin approval. You will be notified once approved.'
-            });
-            return;
-        }
-
-        next();
-    } catch (error) {
-        console.error('Approval check error:', error);
-        res.status(500).json({ error: 'Failed to check approval status' });
+    if (!req.profile?.isApproved) {
+        res.status(403).json({
+            error: 'Account pending approval',
+            message: 'Your account is awaiting admin approval. You will be notified once approved.'
+        });
+        return;
     }
+
+    next();
 }
 
 /**
@@ -125,27 +133,13 @@ export async function requireAdmin(
     res: Response,
     next: NextFunction
 ) {
-    const userId = req.user!.id;
-
-    try {
-        const result = await pool.query(
-            `SELECT is_admin FROM profiles WHERE id = $1`,
-            [userId]
-        );
-
-        const profile = result.rows[0];
-
-        if (!profile || !profile.is_admin) {
-            res.status(403).json({
-                error: 'Admin access required',
-                message: 'You do not have permission to access this resource.'
-            });
-            return;
-        }
-
-        next();
-    } catch (error) {
-        console.error('Admin check error:', error);
-        res.status(500).json({ error: 'Failed to check admin status' });
+    if (!req.profile?.isAdmin) {
+        res.status(403).json({
+            error: 'Admin access required',
+            message: 'You do not have permission to access this resource.'
+        });
+        return;
     }
+
+    next();
 }

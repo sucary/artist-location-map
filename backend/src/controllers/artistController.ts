@@ -1,27 +1,104 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { ArtistService } from '../services/artistService';
 import { ArtistQueryParams, LocationView } from '../types/artist';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
 import { ArtistInputSchema } from '../schemas/artistValidation';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
+import pool from '../config/database';
 
-export const getAllArtists = asyncHandler(async (req: Request, res: Response) => {
+// Cache admin user ID to avoid repeated queries
+let cachedAdminUserId: string | null = null;
+
+async function getAdminUserId(): Promise<string | null> {
+    if (cachedAdminUserId) return cachedAdminUserId;
+
+    const result = await pool.query(
+        `SELECT id FROM profiles WHERE is_admin = true LIMIT 1`
+    );
+    cachedAdminUserId = result.rows[0]?.id || null;
+    return cachedAdminUserId;
+}
+
+async function getUserIdByUsername(username: string): Promise<string | null> {
+    const result = await pool.query(
+        `SELECT id FROM profiles WHERE username = $1`,
+        [username]
+    );
+    return result.rows[0]?.id || null;
+}
+
+async function getTargetUserId(req: AuthenticatedRequest): Promise<string | undefined> {
+    const isAdmin = req.profile?.isAdmin ?? false;
+    const isAuthenticated = !!req.user;
+
+    if (!isAuthenticated) {
+        const adminId = await getAdminUserId();
+        return adminId ?? undefined;
+    }
+
+    if (isAdmin && req.query.viewAll === 'true') {
+        return undefined;
+    }
+
+    return req.user!.id;
+}
+
+export const getAllArtists = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const targetUserId = await getTargetUserId(req);
+
     const filters: ArtistQueryParams = {
         name: req.query.name as string,
         city: req.query.city as string,
         province: req.query.province as string,
-        view: req.query.view as LocationView
+        view: req.query.view as LocationView,
+        userId: targetUserId
     };
 
     const artists = await ArtistService.getAll(filters);
     res.json(artists);
 });
 
-export const getArtistById = asyncHandler(async (req: Request, res: Response) => {
+export const getArtistsByUsername = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const username = req.params.username;
+    const targetUserId = await getUserIdByUsername(username);
+    if (!targetUserId) {
+        throw new AppError('User not found', 404);
+    }
+
+    const isAdmin = req.profile?.isAdmin ?? false;
+    const isOwnProfile = targetUserId === req.user!.id;
+
+    // Only allow own profile or admin
+    if (!isOwnProfile && !isAdmin) {
+        throw new AppError('Admin access required', 403);
+    }
+
+    const filters: ArtistQueryParams = {
+        name: req.query.name as string,
+        city: req.query.city as string,
+        province: req.query.province as string,
+        view: req.query.view as LocationView,
+        userId: targetUserId
+    };
+
+    const artists = await ArtistService.getAll(filters);
+    res.json(artists);
+});
+
+export const getArtistById = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const isAdmin = req.profile?.isAdmin ?? false;
+    const userId = req.user!.id;
+
     const artist = await ArtistService.getById(req.params.id);
     if (!artist) {
         throw new AppError('Artist not found', 404);
     }
+
+    // Check ownership (admin can view any artist)
+    if (!isAdmin && artist.userId !== userId) {
+        throw new AppError('Artist not found', 404);
+    }
+
     res.json(artist);
 });
 
@@ -43,13 +120,14 @@ export const createArtist = asyncHandler(async (req: AuthenticatedRequest, res: 
 export const updateArtist = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const data = ArtistInputSchema.partial().parse(req.body);
     const userId = req.user!.id;
+    const isAdmin = req.profile?.isAdmin ?? false;
 
-    // Check ownership
+    // Check ownership (admin can edit any artist)
     const artist = await ArtistService.getById(req.params.id);
     if (!artist) {
         throw new AppError('Artist not found', 404);
     }
-    if (artist.userId && artist.userId !== userId) {
+    if (!isAdmin && artist.userId !== userId) {
         throw new AppError('Not authorized to update this artist', 403);
     }
 
@@ -66,13 +144,14 @@ export const updateArtist = asyncHandler(async (req: AuthenticatedRequest, res: 
 
 export const deleteArtist = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user!.id;
+    const isAdmin = req.profile?.isAdmin ?? false;
 
-    // Check ownership
+    // Check ownership (admin can delete any artist)
     const artist = await ArtistService.getById(req.params.id);
     if (!artist) {
         throw new AppError('Artist not found', 404);
     }
-    if (artist.userId && artist.userId !== userId) {
+    if (!isAdmin && artist.userId !== userId) {
         throw new AppError('Not authorized to delete this artist', 403);
     }
 
@@ -80,12 +159,37 @@ export const deleteArtist = asyncHandler(async (req: AuthenticatedRequest, res: 
     res.status(204).send();
 });
 
-export const getArtistCountByCity = asyncHandler(async (req: Request, res: Response) => {
+export const getArtistCountByCity = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const view = (req.query.view as LocationView) || 'active';
     if (view !== 'original' && view !== 'active') {
         throw new AppError('Invalid view parameter. Use "original" or "active"', 400);
     }
 
-    const counts = await ArtistService.countByCity(view);
+    const targetUserId = await getTargetUserId(req);
+    const counts = await ArtistService.countByCity(view, targetUserId);
+    res.json(counts);
+});
+
+export const getArtistCountByUsername = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const username = req.params.username;
+    const targetUserId = await getUserIdByUsername(username);
+    if (!targetUserId) {
+        throw new AppError('User not found', 404);
+    }
+
+    const isAdmin = req.profile?.isAdmin ?? false;
+    const isOwnProfile = targetUserId === req.user!.id;
+
+    // Only allow own profile or admin
+    if (!isOwnProfile && !isAdmin) {
+        throw new AppError('Admin access required', 403);
+    }
+
+    const view = (req.query.view as LocationView) || 'active';
+    if (view !== 'original' && view !== 'active') {
+        throw new AppError('Invalid view parameter. Use "original" or "active"', 400);
+    }
+
+    const counts = await ArtistService.countByCity(view, targetUserId);
     res.json(counts);
 });

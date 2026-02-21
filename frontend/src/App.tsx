@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import './App.css';
 import { deleteArtist, type SearchResult } from './services/api';
@@ -13,8 +14,22 @@ import { useAuth } from './context/AuthContext';
 import type { Artist, SelectionMode } from './types/artist';
 
 function App() {
+    const { username } = useParams<{ username?: string }>();
+    const navigate = useNavigate();
     const queryClient = useQueryClient();
-    const { user, profile } = useAuth();
+    const { user, profile, loading } = useAuth();
+
+    // Viewing another user's map (admin only)
+    const isViewingOther = !!username;
+    const isOwnUsername = username && profile?.username === username;
+
+    // Redirect non-admin users away from other users' maps
+    useEffect(() => {
+        if (loading) return;
+        if (isViewingOther && !isOwnUsername && !profile?.isAdmin) {
+            navigate('/', { replace: true });
+        }
+    }, [username, profile, loading, isViewingOther, isOwnUsername, navigate]);
     const [showForm, setShowForm] = useState(false);
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [showAdminDashboard, setShowAdminDashboard] = useState(false);
@@ -77,14 +92,6 @@ function App() {
         }
     };
 
-    /*
-        TODO
-            - Make shadowing consistent (shadow-xl/30 vs shadow-md)
-            - Add a proper locate icon instead of "X"
-
-
-    */
-
     return (
         <div className="h-screen w-screen flex flex-col">
             <BackendStatus />
@@ -98,7 +105,7 @@ function App() {
 
             {user && profile && !profile.isApproved && <ApprovalPending />}
 
-            {!showForm && user && profile?.isApproved && (
+            {!showForm && user && profile?.isApproved && !isViewingOther && (
                 <AddArtistButton onClick={handleAddArtistClick} />
             )}
             {showForm && (
@@ -115,10 +122,11 @@ function App() {
                 <AdminDashboard onClose={() => setShowAdminDashboard(false)} />
             )}
             <MapView
+                username={username}
                 selectionMode={selectionMode}
                 onLocationPick={handleLocationPick}
-                onEditArtist={handleEditArtist}
-                onDeleteArtist={handleDeleteArtist}
+                onEditArtist={isViewingOther ? undefined : handleEditArtist}
+                onDeleteArtist={isViewingOther ? undefined : handleDeleteArtist}
                 onEmptyClick={showForm ? handleCloseForm : undefined}
             />
         </div>

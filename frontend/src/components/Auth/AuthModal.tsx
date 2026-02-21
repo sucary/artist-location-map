@@ -21,7 +21,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
     const [message, setMessage] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
 
-    const { signIn, signUp, signInWithGoogle, signInWithGitHub } = useAuth();
+    const { signIn, signUp, signInWithOAuth } = useAuth();
 
     if (!isOpen) return null;
 
@@ -125,11 +125,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
     const handleOAuthClick = async (provider: 'google' | 'github') => {
         setError(null);
         try {
-            if (provider === 'google') {
-                await signInWithGoogle();
-            } else {
-                await signInWithGitHub();
-            }
+            await signInWithOAuth(provider);
         } catch (err) {
             setError('Failed to sign in with ' + provider);
         }

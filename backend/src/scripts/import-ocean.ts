@@ -2,18 +2,26 @@ import pool, { verifyDatabaseConnection } from '../config/database';
 import * as shapefile from 'shapefile';
 import path from 'path';
 
+// Usage: npx ts-node import-ocean.ts [shapefile_path] [source_srid]
+// Examples:
+//   npx ts-node import-ocean.ts                                          # Natural Earth (4326)
+//   npx ts-node import-ocean.ts ./data/simplified_water_polygons.shp 3857  # OSM (3857)
+
 async function importOceanData() {
     await verifyDatabaseConnection();
 
     const customPath = process.argv[2];
+    const sourceSRID = parseInt(process.argv[3]) || 4326;
+
     const shapefilePath = customPath
         ? path.resolve(customPath)
         : path.join(__dirname, '../../data/ne_10m_ocean.shp');
 
     console.log('Starting import of ocean data from:', shapefilePath);
+    console.log('Source SRID:', sourceSRID, sourceSRID === 3857 ? '(OSM format - will transform to 4326)' : '(WGS84)');
 
     const client = await pool.connect();
-    
+
     try {
         await client.query(`
             CREATE TABLE IF NOT EXISTS water_polygons (
@@ -28,35 +36,47 @@ async function importOceanData() {
 
         console.log('Reading shapefile and inserting...');
         let count = 0;
-        
+
         const source = await shapefile.open(shapefilePath);
-        
+
         while (true) {
             const result = await source.read();
             if (result.done) break;
-            
+
             const feature = result.value;
-            
+
             if (feature.geometry) {
-                await client.query(`
-                    INSERT INTO water_polygons (geom)
-                    VALUES (
-                        ST_Multi(
-                            ST_SetSRID(
-                                ST_GeomFromGeoJSON($1), 
-                                4326
-                            )
-                        )::geography
-                    )
-                `, [JSON.stringify(feature.geometry)]);
-                
+                // If source is 3857 (OSM), transform to 4326. Otherwise use as-is.
+                const insertQuery = sourceSRID === 3857
+                    ? `
+                        INSERT INTO water_polygons (geom)
+                        VALUES (
+                            ST_Multi(
+                                ST_Transform(
+                                    ST_SetSRID(ST_GeomFromGeoJSON($1), 3857),
+                                    4326
+                                )
+                            )::geography
+                        )
+                    `
+                    : `
+                        INSERT INTO water_polygons (geom)
+                        VALUES (
+                            ST_Multi(
+                                ST_SetSRID(ST_GeomFromGeoJSON($1), 4326)
+                            )::geography
+                        )
+                    `;
+
+                await client.query(insertQuery, [JSON.stringify(feature.geometry)]);
+
                 count++;
                 if (count % 100 === 0) process.stdout.write(`\rImported ${count} polygons...`);
             }
         }
-        
+
         console.log(`\nSuccessfully imported ${count} ocean polygons.`);
-        
+
     } catch (error) {
         console.error('Error importing ocean data:', error);
     } finally {

@@ -119,6 +119,7 @@ export interface ArtistQueryParams {
     city?: string;
     province?: string;
     view?: LocationView; // Which location to search by
+    userId?: string; // Filter by owner
 }
 
 /**

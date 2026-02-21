@@ -1,6 +1,22 @@
 import { Artist, StoreArtistDTO, UpdateStoreArtistDTO, LocationCount, LocationView, ArtistQueryParams, CropArea } from '../types/artist';
 import pool from '../config/database';
 
+const ARTIST_SELECT_COLUMNS = `
+    id, user_id, name, source_image, avatar_crop, profile_crop,
+    original_city, original_province, original_city_id,
+    ST_Y(original_coordinates::geometry) as original_lat,
+    ST_X(original_coordinates::geometry) as original_lng,
+    active_city, active_province, active_city_id,
+    ST_Y(active_coordinates::geometry) as active_lat,
+    ST_X(active_coordinates::geometry) as active_lng,
+    ST_Y(original_display_coordinates::geometry) as original_display_lat,
+    ST_X(original_display_coordinates::geometry) as original_display_lng,
+    ST_Y(active_display_coordinates::geometry) as active_display_lat,
+    ST_X(active_display_coordinates::geometry) as active_display_lng,
+    instagram_url, twitter_url, apple_music_url, website_url, youtube_url,
+    created_at, updated_at
+`;
+
 /**
  * Helper function to convert database row to Artist object
  */
@@ -65,11 +81,17 @@ function rowToArtist(row: Record<string, unknown>): Artist {
 export const ArtistStore = {
     getAll: async (params: ArtistQueryParams = {}): Promise<Artist[]> => {
         try {
-            const { name, city, province, view = 'active' } = params;
+            const { name, city, province, view = 'active', userId } = params;
 
             const conditions: string[] = [];
             const values: unknown[] = [];
             let paramIndex = 1;
+
+            // Filter by user if userId provided (non-admin users)
+            if (userId) {
+                conditions.push(`user_id = $${paramIndex++}`);
+                values.push(userId);
+            }
 
             if (name) {
                 conditions.push(`name ILIKE $${paramIndex++}`);
@@ -91,20 +113,7 @@ export const ArtistStore = {
             const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
             const result = await pool.query(`
-                SELECT
-                    id, user_id, name, source_image, avatar_crop, profile_crop,
-                    original_city, original_province, original_city_id,
-                    ST_Y(original_coordinates::geometry) as original_lat,
-                    ST_X(original_coordinates::geometry) as original_lng,
-                    active_city, active_province, active_city_id,
-                    ST_Y(active_coordinates::geometry) as active_lat,
-                    ST_X(active_coordinates::geometry) as active_lng,
-                    ST_Y(original_display_coordinates::geometry) as original_display_lat,
-                    ST_X(original_display_coordinates::geometry) as original_display_lng,
-                    ST_Y(active_display_coordinates::geometry) as active_display_lat,
-                    ST_X(active_display_coordinates::geometry) as active_display_lng,
-                    instagram_url, twitter_url, apple_music_url, website_url, youtube_url,
-                    created_at, updated_at
+                SELECT ${ARTIST_SELECT_COLUMNS}
                 FROM artists
                 ${whereClause}
                 ORDER BY created_at DESC
@@ -120,20 +129,7 @@ export const ArtistStore = {
     getById: async (id: string): Promise<Artist | undefined> => {
         try {
             const result = await pool.query(`
-                SELECT
-                    id, user_id, name, source_image, avatar_crop, profile_crop,
-                    original_city, original_province, original_city_id,
-                    ST_Y(original_coordinates::geometry) as original_lat,
-                    ST_X(original_coordinates::geometry) as original_lng,
-                    active_city, active_province, active_city_id,
-                    ST_Y(active_coordinates::geometry) as active_lat,
-                    ST_X(active_coordinates::geometry) as active_lng,
-                    ST_Y(original_display_coordinates::geometry) as original_display_lat,
-                    ST_X(original_display_coordinates::geometry) as original_display_lng,
-                    ST_Y(active_display_coordinates::geometry) as active_display_lat,
-                    ST_X(active_display_coordinates::geometry) as active_display_lng,
-                    instagram_url, twitter_url, apple_music_url, website_url, youtube_url,
-                    created_at, updated_at
+                SELECT ${ARTIST_SELECT_COLUMNS}
                 FROM artists
                 WHERE id = $1
             `, [id]);
@@ -167,20 +163,7 @@ export const ArtistStore = {
                     ST_SetSRID(ST_MakePoint($23, $24), 4326)::geography,
                     $14, $15, $16, $17, $18
                 )
-                RETURNING
-                    id, user_id, name, source_image, avatar_crop, profile_crop,
-                    original_city, original_province, original_city_id,
-                    ST_Y(original_coordinates::geometry) as original_lat,
-                    ST_X(original_coordinates::geometry) as original_lng,
-                    active_city, active_province, active_city_id,
-                    ST_Y(active_coordinates::geometry) as active_lat,
-                    ST_X(active_coordinates::geometry) as active_lng,
-                    ST_Y(original_display_coordinates::geometry) as original_display_lat,
-                    ST_X(original_display_coordinates::geometry) as original_display_lng,
-                    ST_Y(active_display_coordinates::geometry) as active_display_lat,
-                    ST_X(active_display_coordinates::geometry) as active_display_lng,
-                    instagram_url, twitter_url, apple_music_url, website_url, youtube_url,
-                    created_at, updated_at
+                RETURNING ${ARTIST_SELECT_COLUMNS}
             `, [
                 data.userId,
                 data.name,
@@ -321,20 +304,7 @@ export const ArtistStore = {
                 UPDATE artists
                 SET ${updates.join(', ')}
                 WHERE id = $${paramIndex}
-                RETURNING
-                    id, user_id, name, source_image, avatar_crop, profile_crop,
-                    original_city, original_province, original_city_id,
-                    ST_Y(original_coordinates::geometry) as original_lat,
-                    ST_X(original_coordinates::geometry) as original_lng,
-                    active_city, active_province, active_city_id,
-                    ST_Y(active_coordinates::geometry) as active_lat,
-                    ST_X(active_coordinates::geometry) as active_lng,
-                    ST_Y(original_display_coordinates::geometry) as original_display_lat,
-                    ST_X(original_display_coordinates::geometry) as original_display_lng,
-                    ST_Y(active_display_coordinates::geometry) as active_display_lat,
-                    ST_X(active_display_coordinates::geometry) as active_display_lng,
-                    instagram_url, twitter_url, apple_music_url, website_url, youtube_url,
-                    created_at, updated_at
+                RETURNING ${ARTIST_SELECT_COLUMNS}
             `, values);
 
             if (result.rows.length === 0) {
@@ -362,15 +332,19 @@ export const ArtistStore = {
         }
     },
 
-    countByCity: async (view: LocationView = 'active'): Promise<LocationCount[]> => {
+    countByCity: async (view: LocationView = 'active', userId?: string): Promise<LocationCount[]> => {
         try {
             const column = view === 'original' ? 'original_city' : 'active_city';
+            const whereClause = userId ? 'WHERE user_id = $1' : '';
+            const values = userId ? [userId] : [];
+
             const result = await pool.query(`
                 SELECT ${column} as location, COUNT(*)::int as count
                 FROM artists
+                ${whereClause}
                 GROUP BY ${column}
                 ORDER BY count DESC
-            `);
+            `, values);
 
             return result.rows;
         } catch (error) {

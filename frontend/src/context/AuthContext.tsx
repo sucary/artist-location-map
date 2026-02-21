@@ -13,8 +13,7 @@ interface AuthContextType {
     signIn: (email: string, password: string, rememberMe?: boolean) => Promise<{ error: Error | null }>;
     signUp: (email: string, password: string, username: string) => Promise<{ error: Error | null }>;
     signOut: () => Promise<void>;
-    signInWithGoogle: () => Promise<void>;
-    signInWithGitHub: () => Promise<void>;
+    signInWithOAuth: (provider: 'google' | 'github') => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -54,6 +53,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             (_event, session) => {
                 setSession(session);
                 setLoading(false);
+                // Refetch artists when auth state changes
+                queryClient.invalidateQueries({ queryKey: ['artists'] });
             }
         );
 
@@ -93,20 +94,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await supabase.auth.signOut();
         sessionStorage.removeItem('session-only');
         queryClient.removeQueries({ queryKey: ['profile'] });
+        queryClient.invalidateQueries({ queryKey: ['artists'] });
     };
 
-    const signInWithGoogle = async () => {
+    const signInWithOAuth = async (provider: 'google' | 'github') => {
         await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                redirectTo: window.location.origin,
-            },
-        });
-    };
-
-    const signInWithGitHub = async () => {
-        await supabase.auth.signInWithOAuth({
-            provider: 'github',
+            provider,
             options: {
                 redirectTo: window.location.origin,
             },
@@ -121,8 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signIn,
         signUp,
         signOut,
-        signInWithGoogle,
-        signInWithGitHub,
+        signInWithOAuth,
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

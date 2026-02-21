@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS water_polygons (
 -- Artists table
 CREATE TABLE IF NOT EXISTS artists (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id),
   name VARCHAR(255) NOT NULL,
   source_image TEXT,
   avatar_crop JSONB,
@@ -105,6 +106,7 @@ CREATE INDEX IF NOT EXISTS idx_priority_search_query ON priority_locations(searc
 CREATE INDEX IF NOT EXISTS idx_water_polygons_geom ON water_polygons USING GIST(geom);
 
 -- Indexes for artists
+CREATE INDEX IF NOT EXISTS idx_artists_user_id ON artists(user_id);
 CREATE INDEX IF NOT EXISTS idx_artists_original_coords ON artists USING GIST(original_coordinates);
 CREATE INDEX IF NOT EXISTS idx_artists_active_coords ON artists USING GIST(active_coordinates);
 CREATE INDEX IF NOT EXISTS idx_artists_original_display_coords ON artists USING GIST(original_display_coordinates);
@@ -123,6 +125,7 @@ CREATE TRIGGER update_artists_updated_at
 
 -- Seed priority locations
 INSERT INTO priority_locations (search_query, osm_id, osm_type, display_name, rank) VALUES
-  ('tokyo', 7515426, 'relation', 'Tokyo 23 wards, Tokyo, Japan', 0),
+  ('tokyo', 1543125, 'relation', 'Tokyo, Japan', 0),
+  ('tokyo', 19631009, 'relation', 'Tokyo 23 Special Wards, Japan', 1),
   ('new york', 175905, 'relation', 'New York, New York, USA', 0)
 ON CONFLICT DO NOTHING;

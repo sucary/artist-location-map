@@ -112,6 +112,19 @@ async function seedDatabase() {
         console.log('Starting database seed...');
         console.log('Note: This may take ~30-60 seconds due to Nominatim rate limits\n');
 
+        // Get admin user to assign artists to
+        const adminResult = await pool.query(
+            `SELECT id FROM profiles WHERE is_admin = true LIMIT 1`
+        );
+        const adminUserId = adminResult.rows[0]?.id;
+
+        if (!adminUserId) {
+            console.error('No admin user found. Please create an admin user first.');
+            process.exit(1);
+        }
+
+        console.log(`Using admin user: ${adminUserId}\n`);
+
         await pool.query('DELETE FROM artists');
         console.log('Cleared existing artists');
         await pool.query('DELETE FROM city_boundaries');
@@ -119,7 +132,7 @@ async function seedDatabase() {
 
         for (const artist of sampleArtists) {
             try {
-                await ArtistService.create(artist);
+                await ArtistService.create(artist, adminUserId);
                 console.log(`Created artist: ${artist.name}`);
             } catch (err) {
                 console.error(`Failed to create artist ${artist.name}:`, err);

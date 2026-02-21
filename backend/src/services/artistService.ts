@@ -229,7 +229,7 @@ export const ArtistService = {
         return await ArtistStore.delete(id);
     },
 
-    countByCity: async (view: 'original' | 'active' = 'active') => {
-        return await ArtistStore.countByCity(view);
+    countByCity: async (view: 'original' | 'active' = 'active', userId?: string) => {
+        return await ArtistStore.countByCity(view, userId);
     }
 };
