@@ -114,11 +114,14 @@ export const TextSearch = {
         const localResults = await this.getLocalResults(query, limit);
 
         if (localResults.length > 0) {
-            const alreadyCached = await SearchCacheService.has(query);
+            // Show "more" if not cached OR if cache has more results than local
+            const cachedCount = await SearchCacheService.getResultCount(query);
+            const hasMore = cachedCount === null || cachedCount > localResults.length;
+
             return {
                 results: localResults.slice(0, limit),
                 source: 'local',
-                hasMore: !alreadyCached
+                hasMore
             };
         }
 

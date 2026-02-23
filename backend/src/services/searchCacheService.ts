@@ -42,19 +42,25 @@ export const SearchCacheService = {
      * Check if a keyword is cached (without incrementing hit count)
      */
     async has(query: string): Promise<boolean> {
+        return (await this.getResultCount(query)) !== null;
+    },
+
+    /**
+     * Get cached result count (null if not cached)
+     */
+    async getResultCount(query: string): Promise<number | null> {
         const keyword = this.normalizeKeyword(query);
 
         try {
             const result = await pool.query(`
-                SELECT 1 FROM search_cache
+                SELECT result_count FROM search_cache
                 WHERE keyword = $1 AND expires_at > NOW()
-                LIMIT 1
             `, [keyword]);
 
-            return result.rows.length > 0;
+            return result.rows.length > 0 ? result.rows[0].result_count : null;
         } catch (error) {
-            console.error('Error checking search cache:', error);
-            return false;
+            console.error('Error getting cache count:', error);
+            return null;
         }
     },
 

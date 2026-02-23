@@ -1,6 +1,13 @@
 import pool from '../config/database';
 import { City, NominatimResponse, NominatimSearchResult } from '../types/city';
 
+/**
+ * Get display type for a location
+ */
+function getDisplayType(type: string, addresstype?: string): string {
+    return type === 'administrative' && addresstype ? addresstype : type;
+}
+
 export const CityService = {
     /**
      * (old) Get city data, fetching from Nominatim if not in DB
@@ -101,13 +108,19 @@ export const CityService = {
     getPriorityLocations: async (query: string): Promise<City[]> => {
         const result = await pool.query(`
             SELECT
-                cb.id, cb.name, cb.province, cb.country, cb.display_name,
-                cb.osm_id, cb.osm_type, cb.type, cb.class, cb.importance,
+                cb.id,
+                COALESCE(cb.name, SPLIT_PART(pl.display_name, ',', 1)) as name,
+                COALESCE(cb.province, '') as province,
+                cb.country,
+                COALESCE(cb.display_name, pl.display_name) as display_name,
+                COALESCE(cb.osm_id::text, pl.osm_id::text) as osm_id,
+                COALESCE(cb.osm_type, pl.osm_type) as osm_type,
+                cb.type, cb.class, cb.importance,
                 ST_Y(cb.center::geometry) as lat,
                 ST_X(cb.center::geometry) as lng,
                 pl.rank
             FROM priority_locations pl
-            JOIN city_boundaries cb ON cb.osm_id = pl.osm_id AND cb.osm_type = pl.osm_type
+            LEFT JOIN city_boundaries cb ON cb.osm_id = pl.osm_id AND cb.osm_type = pl.osm_type
             WHERE pl.search_query = LOWER($1)
             ORDER BY pl.rank ASC
         `, [query]);
@@ -118,7 +131,7 @@ export const CityService = {
             province: row.province,
             country: row.country,
             displayName: row.display_name,
-            center: { lat: row.lat, lng: row.lng },
+            center: { lat: row.lat || 0, lng: row.lng || 0 },
             osmId: parseInt(row.osm_id),
             osmType: row.osm_type,
             type: row.type,
@@ -168,10 +181,7 @@ export const CityService = {
                 osmType: item.osm_type,
                 lat: parseFloat(item.lat),
                 lng: parseFloat(item.lon),
-                // Use addresstype for administrative boundaries (shows "city", "state", etc.)
-                type: item.type === 'administrative' && item.addresstype
-                    ? item.addresstype
-                    : item.type,
+                type: getDisplayType(item.type, item.addresstype),
                 class: item.class,
                 importance: item.importance,
                 address: item.address as Record<string, string>,
@@ -466,6 +476,8 @@ export const CityService = {
                     ST_SetSRID(ST_MakePoint($13, $14), 4326)::geography
                 )
                 ON CONFLICT (osm_id, osm_type) DO UPDATE SET
+                    type = EXCLUDED.type,
+                    display_name = EXCLUDED.display_name,
                     last_updated = NOW()
                 RETURNING id
             `, [
@@ -475,7 +487,7 @@ export const CityService = {
                 data.display_name,
                 data.osm_id,
                 data.osm_type,
-                data.type,
+                getDisplayType(data.type, data.addresstype),
                 data.class,
                 data.importance,
                 data.boundingbox,

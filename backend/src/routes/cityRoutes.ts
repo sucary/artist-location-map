@@ -17,7 +17,7 @@ const searchLimiter = rateLimit({
 // GET /api/cities/search - Text-based location search
 router.get('/search', searchLimiter, asyncHandler(async (req, res) => {
     const query = req.query.q as string;
-    const limit = parseInt(req.query.limit as string) || 20;
+    const limit = parseInt(req.query.limit as string) || 50;
     const source = (req.query.source as string || 'auto') as 'auto' | 'local' | 'nominatim';
 
     if (!query || query.trim().length < 2) {
@@ -31,7 +31,7 @@ router.get('/search', searchLimiter, asyncHandler(async (req, res) => {
 // POST /api/cities/reverse/search - Coordinate-based search (multiple results)
 router.post('/reverse/search', searchLimiter, asyncHandler(async (req, res) => {
     const { lat, lng } = req.body;
-    const limit = parseInt(req.query.limit as string) || 10;
+    const limit = parseInt(req.query.limit as string) || 50;
     const source = (req.query.source as string || 'auto') as 'auto' | 'nominatim';
 
     if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
