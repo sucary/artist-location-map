@@ -175,7 +175,7 @@ const ArtistForm = ({
             />
         )}
 
-        <div className="absolute top-28 right-2 z-modal w-80 bg-white rounded-lg shadow-xl overflow-hidden flex flex-col max-h-[calc(100vh-8rem)] font-sans">
+        <div className="absolute top-28 right-2 z-[1050] w-80 bg-white rounded-lg shadow-xl overflow-hidden flex flex-col max-h-[calc(100vh-8rem)] font-sans">
             <div className="overflow-y-auto flex-1">
                 {/* Header with background and avatar */}
                 <ArtistFormHeader
@@ -189,7 +189,7 @@ const ArtistForm = ({
                 />
 
                 {/* Form content */}
-                <div className="mt-10 px-4 pb-2 flex flex-col gap-4">
+                <div className="mt-10 px-4 flex flex-col gap-4">
                     {/* Upload error */}
                     {uploadError && (
                         <div className="p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
@@ -243,7 +243,7 @@ const ArtistForm = ({
                         </button>
 
                         {isSocialExpanded && (
-                            <div className="mt-2 flex flex-col gap-3 px-0 animate-in slide-in-from-top-2 duration-200">
+                            <div className="mt-2 pb-2 flex flex-col gap-3 px-0 animate-in slide-in-from-top-2 duration-200">
                                 {SOCIAL_FIELDS.map((field) => (
                                     <SocialLinkInput
                                         key={field.key}

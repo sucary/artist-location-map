@@ -12,6 +12,8 @@
   --color-card: #161618;
   --color-elevated: #1C1C1E;
   --color-muted: #C2CAD7;
+  --color-focus: #007AFF;
+  --color-error: #b91c1c;
 
   /* Z-index scale */
   --z-index-dropdown: 100;

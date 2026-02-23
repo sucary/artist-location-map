@@ -1,5 +1,7 @@
+import { useState, useMemo } from 'react';
 import type { ComponentType, SVGProps } from 'react';
 import type { SocialLinkKey } from '../constants/artist';
+import { validateSocialUrl } from '../utils/urlValidation';
 
 export interface SocialLinkField {
     key: SocialLinkKey;
@@ -15,18 +17,39 @@ interface SocialLinkInputProps {
 
 const SocialLinkInput = ({ field, value, onChange }: SocialLinkInputProps) => {
     const { key, icon: Icon, placeholder } = field;
-    const iconColor = value ? 'text-primary' : 'text-gray-400';
+    const [error, setError] = useState<string | null>(null);
+    const [touched, setTouched] = useState(false);
+
+    const isValid = useMemo(() => {
+        if (!value) return false;
+        return validateSocialUrl(key, value).isValid;
+    }, [key, value]);
+
+    const handleBlur = () => {
+        setTouched(true);
+        const result = validateSocialUrl(key, value);
+        setError(result.error || null);
+    };
+
+    const handleChange = (newValue: string) => {
+        onChange(key, newValue);
+        if (error) setError(null);
+    };
 
     return (
         <div className="relative">
             <input
                 type="text"
                 placeholder={placeholder}
-                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded focus:outline-none focus:border-primary focus:ring-1 focus:ring-inset focus:ring-primary"
+                className="w-full pl-9 pr-3 py-2 text-sm border rounded border-gray-200 focus:outline-none focus:border-primary focus:ring-1 focus:ring-inset focus:ring-primary"
                 value={value}
-                onChange={(e) => onChange(key, e.target.value)}
+                onChange={(e) => handleChange(e.target.value)}
+                onBlur={handleBlur}
             />
-            <Icon className={`absolute left-3 top-2.5 w-4 h-4 transition-colors ${iconColor}`} />
+            <Icon className={`absolute left-3 top-2.5 w-4 h-4 transition-colors ${isValid ? 'text-primary' : 'text-gray-400'}`} />
+            {touched && error && (
+                <p className="text-xs text-red-700 mt-1">{error}</p>
+            )}
         </div>
     );
 };

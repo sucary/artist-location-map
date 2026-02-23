@@ -14,11 +14,11 @@ export const LocationSchema = z.object({
 });
 
 export const SocialLinksSchema = z.object({
-    instagram: z.string().url("Invalid Instagram URL").optional().or(z.literal('')),
-    twitter: z.string().url("Invalid Twitter URL").optional().or(z.literal('')),
-    appleMusic: z.string().url("Invalid Apple Music URL").optional().or(z.literal('')),
-    website: z.string().url("Invalid Website URL").optional().or(z.literal('')),
-    youtube: z.string().url("Invalid YouTube URL").optional().or(z.literal('')),
+    instagram: z.string().optional().or(z.literal('')),
+    twitter: z.string().optional().or(z.literal('')),
+    appleMusic: z.string().optional().or(z.literal('')),
+    website: z.string().optional().or(z.literal('')),
+    youtube: z.string().optional().or(z.literal('')),
 });
 
 export const CropAreaSchema = z.object({

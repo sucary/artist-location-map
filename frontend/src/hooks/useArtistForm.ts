@@ -6,6 +6,7 @@ import type { Artist, CropArea } from '../types/artist';
 import type { SocialLinkKey } from '../constants/artist';
 import { extractLocationData, createEmptyLocation, hasValidCoordinates } from '../utils/locationUtils';
 import { uploadImageToCloudinary } from '../utils/cloudinary';
+import { validateAllSocialLinks } from '../utils/urlValidation';
 
 export interface UseArtistFormOptions {
     initialData?: Artist;
@@ -152,8 +153,14 @@ export const useArtistForm = ({
             return 'Active location is required';
         }
 
+        const socialValidation = validateAllSocialLinks(formData.socialLinks);
+        if (!socialValidation.isValid) {
+            const firstError = Object.values(socialValidation.errors)[0];
+            return firstError || 'Invalid social link URL';
+        }
+
         return null;
-    }, [formData.name, formData.originalLocation, formData.activeLocation]);
+    }, [formData.name, formData.originalLocation, formData.activeLocation, formData.socialLinks]);
 
     const handleSave = useCallback(async () => {
         setError(null);
