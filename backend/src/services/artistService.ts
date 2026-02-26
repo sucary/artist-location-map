@@ -74,7 +74,12 @@ export const ArtistService = {
             (Math.abs(data.activeLocation.coordinates.lat - activeCity.center.lat) > 0.0001 ||
              Math.abs(data.activeLocation.coordinates.lng - activeCity.center.lng) > 0.0001);
 
-        // 4. Set coordinates and display coordinates based on selection method
+        // 4. Check if active was copied from original (same coordinates)
+        const isCopiedFromOriginal = data.originalLocation.coordinates && data.activeLocation.coordinates &&
+            Math.abs(data.originalLocation.coordinates.lat - data.activeLocation.coordinates.lat) < 0.0001 &&
+            Math.abs(data.originalLocation.coordinates.lng - data.activeLocation.coordinates.lng) < 0.0001;
+
+        // 5. Set coordinates and display coordinates based on selection method
         let originalDisplayCoordinates, activeDisplayCoordinates;
 
         if (originalIsManualSelection) {
@@ -87,7 +92,11 @@ export const ArtistService = {
             originalDisplayCoordinates = randomPoint || originalCity.center;
         }
 
-        if (activeIsManualSelection) {
+        if (isCopiedFromOriginal) {
+            // Copied from original
+            data.activeLocation.coordinates = data.originalLocation.coordinates;
+            activeDisplayCoordinates = originalDisplayCoordinates;
+        } else if (activeIsManualSelection) {
             // Manual selection
             activeDisplayCoordinates = data.activeLocation.coordinates;
         } else {
@@ -197,6 +206,11 @@ export const ArtistService = {
             (Math.abs(data.activeLocation.coordinates.lat - activeCity.center.lat) > 0.0001 ||
              Math.abs(data.activeLocation.coordinates.lng - activeCity.center.lng) > 0.0001);
 
+        // Check if active was copied from original (same coordinates)
+        const isCopiedFromOriginal = data.originalLocation?.coordinates && data.activeLocation?.coordinates &&
+            Math.abs(data.originalLocation.coordinates.lat - data.activeLocation.coordinates.lat) < 0.0001 &&
+            Math.abs(data.originalLocation.coordinates.lng - data.activeLocation.coordinates.lng) < 0.0001;
+
         // Handle display coordinates based on selection method
         if (data.originalLocation) {
             if (originalIsManualSelection) {
@@ -211,7 +225,11 @@ export const ArtistService = {
         }
 
         if (data.activeLocation) {
-            if (activeIsManualSelection) {
+            if (isCopiedFromOriginal && storeData.originalLocationDisplayCoordinates) {
+                // Copied from original - use same display coordinates
+                data.activeLocation.coordinates = data.originalLocation!.coordinates;
+                storeData.activeLocationDisplayCoordinates = storeData.originalLocationDisplayCoordinates;
+            } else if (activeIsManualSelection) {
                 // Manual selection
                 storeData.activeLocationDisplayCoordinates = data.activeLocation.coordinates;
             } else {

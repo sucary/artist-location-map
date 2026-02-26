@@ -85,14 +85,17 @@ export interface SearchResponse {
 export const searchCities = async (
     query: string,
     limit: number = 20,
-    source: 'local' | 'nominatim' | 'auto' = 'auto'
+    source: 'local' | 'nominatim' | 'auto' = 'auto',
+    signal?: AbortSignal
 ): Promise<SearchResponse> => {
     try {
         const response = await api.get<SearchResponse>('/cities/search', {
-            params: { q: query, limit, source }
+            params: { q: query, limit, source },
+            signal
         });
         return response.data;
     } catch (error) {
+        if (axios.isCancel(error)) throw error;
         console.error('Failed to search cities:', error);
         throw error;
     }
@@ -128,15 +131,18 @@ export const reverseSearchCities = async (
     lat: number,
     lng: number,
     limit: number = 10,
-    source: 'auto' | 'nominatim' = 'auto'
+    source: 'auto' | 'nominatim' = 'auto',
+    signal?: AbortSignal
 ): Promise<SearchResponse> => {
     try {
         const response = await api.post<SearchResponse>(
             `/cities/reverse/search?limit=${limit}&source=${source}`,
-            { lat, lng }
+            { lat, lng },
+            { signal }
         );
         return response.data;
     } catch (error) {
+        if (axios.isCancel(error)) throw error;
         console.error('Failed to reverse search:', error);
         throw error;
     }

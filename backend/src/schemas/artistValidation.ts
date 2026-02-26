@@ -30,9 +30,9 @@ export const CropAreaSchema = z.object({
 
 export const ArtistInputSchema = z.object({
     name: z.string().min(1, "Name is required"),
-    sourceImage: z.string().optional(),
-    avatarCrop: CropAreaSchema.optional(),
-    profileCrop: CropAreaSchema.optional(),
+    sourceImage: z.string().optional().nullable().transform(val => val ?? undefined),
+    avatarCrop: CropAreaSchema.optional().nullable().transform(val => val ?? undefined),
+    profileCrop: CropAreaSchema.optional().nullable().transform(val => val ?? undefined),
     originalLocation: LocationSchema,
     activeLocation: LocationSchema,
     socialLinks: SocialLinksSchema.optional(),
