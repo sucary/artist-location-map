@@ -18,6 +18,28 @@ L.Marker.prototype.options.icon = DefaultMarker;
 const getPlaceholderUrl = (name: string) =>
     `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&size=150&background=e5e7eb&color=9ca3af`;
 
+// Preload artist avatar images in batch into browser cache
+export const preloadArtistImages = (artists: Artist[], batchSize = 10, delayMs = 100) => {
+  const urls = artists.map(
+    (artist) => getAvatarUrl(artist.sourceImage, artist.avatarCrop) || getPlaceholderUrl(artist.name)
+  );
+
+  let index = 0;
+  const loadBatch = () => {
+    const batch = urls.slice(index, index + batchSize);
+    batch.forEach((url) => {
+      const img = new Image();
+      img.src = url;
+    });
+    index += batchSize;
+    if (index < urls.length) {
+      setTimeout(loadBatch, delayMs);
+    }
+  };
+
+  loadBatch();
+};
+
 // Turn an artist profile into a Leaflet div icon
 export const createArtistMarker = (artist: Artist) => {
   // Use Cloudinary transformation to get avatar image

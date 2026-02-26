@@ -7,7 +7,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { Artist, LocationView } from '../../types/artist';
 import ArtistProfile from '../ArtistProfile';
-import { createArtistMarker } from '../../utils/mapUtils';
+import { createArtistMarker, preloadArtistImages } from '../../utils/mapUtils';
 import {
   CLUSTER_CONFIG,
   createClusterIconFactory,
@@ -42,6 +42,10 @@ const ArtistCluster = ({
     onEditArtist,
     onDeleteArtist,
   });
+
+  useEffect(() => {
+    preloadArtistImages(artists);
+  }, [artists]);
 
   useEffect(() => {
     const markerClusterGroup = L.markerClusterGroup({

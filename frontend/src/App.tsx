@@ -5,7 +5,9 @@ import './App.css';
 import { deleteArtist } from './services/api';
 import MapView from './components/Map/MapView';
 import ArtistForm from './components/ArtistForm';
+import ArtistList from './components/ArtistList';
 import AddArtistButton from './components/Map/buttons/AddArtistButton';
+import ViewArtistListButton from './components/Map/buttons/ViewArtistListButton';
 import { AccountButton } from './components/Auth/AccountButton';
 import { NotificationButton } from './components/Notifications/NotificationButton';
 import { AdminDashboard } from './components/Admin/AdminDashboard';
@@ -35,6 +37,7 @@ function App() {
 
     
     const [showForm, setShowForm] = useState(false);
+    const [showArtistList, setShowArtistList] = useState(false);
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [showAdminDashboard, setShowAdminDashboard] = useState(false);
     const [editingArtist, setEditingArtist] = useState<Artist | null>(null);
@@ -92,8 +95,19 @@ function App() {
         if (!user) {
             setShowAuthModal(true);
         } else {
+            setShowArtistList(false);
             setShowForm(true);
         }
+    };
+
+    const handleViewArtistListClick = () => {
+        setShowForm(false);
+        setShowArtistList(true);
+    };
+
+    const handleEditFromList = (artist: Artist) => {
+        setShowArtistList(false);
+        handleEditArtist(artist);
     };
 
     return (
@@ -118,8 +132,11 @@ function App() {
                 }} />
             )}
 
-            {!showForm && user && profile?.isApproved && !isViewingOther && (
-                <AddArtistButton onClick={handleAddArtistClick} />
+            {!showForm && !showArtistList && user && profile?.isApproved && !isViewingOther && (
+                <>
+                    <AddArtistButton onClick={handleAddArtistClick} />
+                    <ViewArtistListButton onClick={handleViewArtistListClick} />
+                </>
             )}
             {showForm && (
                 <ArtistForm
@@ -131,6 +148,13 @@ function App() {
                     onConsumePendingCoordinates={handleConsumeCoordinates}
                 />
             )}
+            {showArtistList && (
+                <ArtistList
+                    onClose={() => setShowArtistList(false)}
+                    onEditArtist={handleEditFromList}
+                    onDeleteArtist={handleDeleteArtist}
+                />
+            )}
             {showAdminDashboard && (
                 <AdminDashboard onClose={() => setShowAdminDashboard(false)} />
             )}
@@ -140,7 +164,7 @@ function App() {
                 onLocationPick={handleLocationPick}
                 onEditArtist={isViewingOther ? undefined : handleEditArtist}
                 onDeleteArtist={isViewingOther ? undefined : handleDeleteArtist}
-                onEmptyClick={showForm ? handleCloseForm : undefined}
+                onEmptyClick={showForm ? handleCloseForm : showArtistList ? () => setShowArtistList(false) : undefined}
             />
         </div>
     );
