@@ -2,7 +2,7 @@ import { useRef, useCallback, useEffect } from 'react';
 import L from 'leaflet';
 import type { Artist } from '../../../types/artist';
 import { CLUSTER_CONFIG } from './clusterConstants';
-import { generateGridPositions, groupMarkersByCity } from './gridLayout';
+import { generateGeoPositions } from './layout';
 import {
   setupMarkerPopupEvents,
   type PopupEventHandlers,
@@ -11,7 +11,7 @@ import {
 interface ExpandedClusterState {
   originalCluster: L.MarkerCluster;
   expandedMarkers: L.Marker[];
-  centerMarker?: L.Marker;
+  connectionLines: L.Polyline[];
 }
 
 interface UseClusterExpansionOptions extends PopupEventHandlers {
@@ -41,13 +41,13 @@ export const useClusterExpansion = ({
     const state = expandedStatesRef.current.get(key);
     if (!state) return;
 
-    // Remove expanded markers from map
+    // Remove expanded markers and connection lines from map
     state.expandedMarkers.forEach((marker) => {
       map.removeLayer(marker);
     });
-    if (state.centerMarker) {
-      map.removeLayer(state.centerMarker);
-    }
+    state.connectionLines.forEach((line) => {
+      map.removeLayer(line);
+    });
 
     // Show the original cluster marker again (only if still in DOM)
     const clusterIcon = (state.originalCluster as any)._icon as HTMLElement | undefined;
@@ -66,7 +66,7 @@ export const useClusterExpansion = ({
   }, [collapseOne]);
 
 
-  // Expand cluster with grid layout, grouped by city
+  // Expand cluster with geographic layout
   const expandCluster = useCallback(
     (cluster: L.MarkerCluster) => {
       const clusterKey = getClusterKey(cluster);
@@ -82,28 +82,37 @@ export const useClusterExpansion = ({
       const clusterLatLng = cluster.getLatLng();
       const clusterPixel = map.latLngToLayerPoint(clusterLatLng);
 
-      const sortedMarkers = groupMarkersByCity(childMarkers, (marker) => {
-        return (marker as L.Marker & { _artistData?: Artist })._artistData;
-      });
-
-      // Generate grid positions for artists
-      const { positions: gridPositions, collapseOffset } = generateGridPositions(
-        sortedMarkers.length,
+      // Generate positions with geographic layout
+      const { positions: geoPositions } = generateGeoPositions(
+        childMarkers,
+        clusterLatLng,
+        map,
         CLUSTER_CONFIG.gridSpacing
       );
 
       const expandedMarkers: L.Marker[] = [];
+      const connectionLines: L.Polyline[] = [];
 
       // Create collapse function for this specific cluster
       const collapseThisCluster = () => collapseOne(clusterKey);
 
-      sortedMarkers.forEach((marker, index) => {
-        const gridOffset = gridPositions[index];
-        const expandedPixel = clusterPixel.add(gridOffset);
+      childMarkers.forEach((marker, index) => {
+        const offset = geoPositions[index];
+        const expandedPixel = clusterPixel.add(offset);
         const expandedLatLng = map.layerPointToLatLng(expandedPixel);
 
         const artistData = (marker as L.Marker & { _artistData?: Artist })
           ._artistData;
+
+        // Draw line from expanded position to artist's actual location
+        const line = L.polyline([expandedLatLng, marker.getLatLng()], {
+          color: '#666',
+          weight: 1.5,
+          opacity: 0.7,
+          dashArray: '4 4',
+          interactive: false,
+        }).addTo(map);
+        connectionLines.push(line);
 
         // Create expanded marker with transition class
         const originalIcon = marker.options.icon as L.DivIcon;
@@ -120,6 +129,14 @@ export const useClusterExpansion = ({
         if (popup) {
           expandedMarker.bindPopup(popup.getContent() as string, popup.options);
         }
+
+        // Highlight connection line on popup open/close
+        expandedMarker.on('popupopen', () => {
+          line.setStyle({ color: '#666', weight: 3, opacity: 1 });
+        });
+        expandedMarker.on('popupclose', () => {
+          line.setStyle({ color: '#666', weight: 1.5, opacity: 0.7, dashArray: '4 4' });
+        });
 
         if (artistData) {
           setupMarkerPopupEvents({
@@ -148,6 +165,7 @@ export const useClusterExpansion = ({
       expandedStatesRef.current.set(clusterKey, {
         originalCluster: cluster,
         expandedMarkers,
+        connectionLines,
       });
     },
     [

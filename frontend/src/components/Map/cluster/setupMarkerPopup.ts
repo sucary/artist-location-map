@@ -90,23 +90,3 @@ export const setupMarkerPopupEvents = ({
     }
   });
 };
-
-/**
- * Creates the collapse button marker for expanded clusters.
- */
-export const createCollapseButton = (
-  latLng: L.LatLng,
-  onCollapse: () => void
-): L.Marker => {
-  const collapseIcon = L.divIcon({
-    html: `<div class="flex items-center justify-center w-6 h-6 bg-surface text-text rounded-full font-bold border border-text shadow-lg cursor-pointer hover:bg-surface-muted text-sm">×</div>`,
-    className: 'cluster-center-marker expanded-cluster-marker',
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
-  });
-
-  const marker = L.marker(latLng, { icon: collapseIcon });
-  marker.on('click', onCollapse);
-
-  return marker;
-};
