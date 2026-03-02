@@ -4,6 +4,7 @@ export interface Profile {
     username: string | null;
     isAdmin: boolean;
     isApproved: boolean;
+    isPrivate: boolean;
 }
 
 export interface PendingUser {

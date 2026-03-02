@@ -49,4 +49,35 @@ router.post('/set-username', requireAuth, asyncHandler(async (req: Authenticated
     res.json({ success: true });
 }));
 
+// PUT /api/auth/profile - Update profile settings
+router.put('/profile', requireAuth, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user!.id;
+    const { username, isPrivate } = req.body;
+
+    // Validate username if provided
+    if (username !== undefined) {
+        if (!username || username.length < 3 || !/^[a-zA-Z0-9_]+$/.test(username)) {
+            res.status(400).json({ error: 'Username must be 3+ chars, letters/numbers/underscores only' });
+            return;
+        }
+
+        // Check if username changed and is available
+        const currentProfile = await ProfileStore.getByUserId(userId);
+        if (currentProfile?.username !== username) {
+            const available = await ProfileStore.checkUsernameAvailable(username);
+            if (!available) {
+                res.status(409).json({ error: 'Username already taken' });
+                return;
+            }
+        }
+    }
+
+    // Update profile
+    await ProfileStore.updateProfile(userId, { username, isPrivate });
+
+    // Return updated profile
+    const updatedProfile = await ProfileStore.getByUserId(userId);
+    res.json(updatedProfile);
+}));
+
 export default router;

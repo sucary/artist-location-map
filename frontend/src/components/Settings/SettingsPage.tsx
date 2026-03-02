@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabase';
 
 export function SettingsPage() {
     const navigate = useNavigate();
@@ -9,9 +10,7 @@ export function SettingsPage() {
     // Username state
     const [username, setUsername] = useState(profile?.username || '');
     const [usernameError, setUsernameError] = useState<string | null>(null);
-    const [checkingUsername, setCheckingUsername] = useState(false);
     const [usernameSaving, setUsernameSaving] = useState(false);
-    const [usernameSuccess, setUsernameSuccess] = useState(false);
 
     // Password state
     const [currentPassword, setCurrentPassword] = useState('');
@@ -24,64 +23,170 @@ export function SettingsPage() {
     const [passwordSuccess, setPasswordSuccess] = useState(false);
 
     // Privacy state
-    const [isPrivate, setIsPrivate] = useState(false);
+    const [isPrivate, setIsPrivate] = useState(profile?.isPrivate ?? false);
     const [privacySaving, setPrivacySaving] = useState(false);
-    const [privacySuccess, setPrivacySuccess] = useState(false);
+    const [privacyError, setPrivacyError] = useState<string | null>(null);
+
+    // Sync isPrivate with profile when it changes
+    useEffect(() => {
+        if (profile) {
+            setIsPrivate(profile.isPrivate ?? false);
+        }
+    }, [profile]);
 
     if (!user || !profile) return null;
 
     const handleUsernameSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // TODO: implement
+        if (username === profile.username) return;
+
+        setUsernameSaving(true);
+        setUsernameError(null);
+
+        try {
+            const token = (await supabase.auth.getSession()).data.session?.access_token;
+            const res = await fetch('http://localhost:3000/api/auth/profile', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({ username }),
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                setUsernameError(data.error || 'Failed to update username');
+                return;
+            }
+
+            // Refresh profile in context
+            window.location.reload();
+        } catch {
+            setUsernameError('Unable to update username. Please try again.');
+        } finally {
+            setUsernameSaving(false);
+        }
     };
 
     const handlePasswordSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // TODO: implement
+        setPasswordError(null);
+
+        if (newPassword.length < 6) {
+            setPasswordError('New password must be at least 6 characters');
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            setPasswordError('Passwords do not match');
+            return;
+        }
+
+        setPasswordSaving(true);
+
+        try {
+            // Verify current password by signing in
+            const { error: signInError } = await supabase.auth.signInWithPassword({
+                email: profile.email,
+                password: currentPassword,
+            });
+
+            if (signInError) {
+                setPasswordError('Current password is incorrect');
+                setPasswordSaving(false);
+                return;
+            }
+
+            // Update password
+            const { error: updateError } = await supabase.auth.updateUser({
+                password: newPassword,
+            });
+
+            if (updateError) {
+                setPasswordError(updateError.message);
+                return;
+            }
+
+            setPasswordSuccess(true);
+            setCurrentPassword('');
+            setNewPassword('');
+            setConfirmPassword('');
+        } catch {
+            setPasswordError('Unable to update password. Please try again.');
+        } finally {
+            setPasswordSaving(false);
+        }
     };
 
     const handlePrivacyToggle = async () => {
-        // TODO: implement
+        const newValue = !isPrivate;
+        setPrivacySaving(true);
+        setPrivacyError(null);
+
+        try {
+            const token = (await supabase.auth.getSession()).data.session?.access_token;
+            const res = await fetch('http://localhost:3000/api/auth/profile', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({ isPrivate: newValue }),
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                setPrivacyError(data.error || 'Failed to update privacy setting');
+                return;
+            }
+
+            setIsPrivate(newValue);
+        } catch {
+            setPrivacyError('Unable to update privacy setting. Please try again.');
+        } finally {
+            setPrivacySaving(false);
+        }
     };
 
     const inputClass = 'w-full px-3 py-2 border border-border-strong rounded-md text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-inset focus:ring-primary';
 
     return (
         <div className="min-h-screen bg-background">
-            {/* Header */}
-            <div className="bg-surface border-b border-border relative">
-                <button
-                    onClick={() => navigate('/')}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-1 text-sm text-text-secondary hover:text-text transition-colors cursor-pointer"
-                >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                    <span>Back to map</span>
-                </button>
-                <div className="max-w-lg mx-auto px-4 py-3">
-                    <h1 className="text-lg font-bold text-text">Settings</h1>
-                </div>
-            </div>
-
             {/* Content */}
             <div className="max-w-lg mx-auto px-4 py-4">
+                <div className="flex items-center gap-4 mb-4">
+                    <button
+                        onClick={() => navigate('/')}
+                        className="flex items-center gap-1 text-sm text-text-secondary hover:text-text transition-colors cursor-pointer"
+                    >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                        <span>Back to map</span>
+                    </button>
+                    <span className="text-border-strong">|</span>
+                    <h1 className="text-lg font-bold text-text">Settings</h1>
+                </div>
                 <div className="bg-surface rounded-lg border border-border divide-y divide-border">
 
                     {/* Privacy */}
                     <div className="p-5">
                         <h2 className="text-lg text-text mb-3">Privacy</h2>
                         <div className="flex items-center justify-between gap-5">
-                            <p className="text-sm text-text">
-                                Hide your artists from other users
-                            </p>
+                            <div>
+                                <p className="text-sm text-text">
+                                    Hide your artists from other users
+                                </p>
+                                {privacyError && <p className="text-xs text-error mt-1">{privacyError}</p>}
+                            </div>
                             <button
                                 type="button"
                                 role="switch"
                                 aria-checked={isPrivate}
                                 onClick={handlePrivacyToggle}
                                 disabled={privacySaving}
-                                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 ${isPrivate ? 'bg-primary' : 'bg-border-strong'}`}
+                                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none disabled:opacity-50 ${isPrivate ? 'bg-primary' : 'bg-border-strong'}`}
                             >
                                 <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm transform transition-transform duration-200 ${isPrivate ? 'translate-x-4' : 'translate-x-0'}`} />
                             </button>
@@ -100,7 +205,6 @@ export function SettingsPage() {
                                     onChange={(e) => {
                                         setUsername(e.target.value);
                                         setUsernameError(null);
-                                        setUsernameSuccess(false);
                                     }}
                                     className={inputClass}
                                 />
@@ -162,6 +266,7 @@ export function SettingsPage() {
                                 />
                             </div>
                             {passwordError && <p className="text-xs text-error">{passwordError}</p>}
+                            {passwordSuccess && <p className="text-xs text-green-600">Password updated successfully</p>}
                             <div className="flex justify-end">
                                 <button
                                     type="submit"

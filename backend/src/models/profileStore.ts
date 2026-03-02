@@ -6,6 +6,7 @@ export interface Profile {
   username: string | null;
   isAdmin: boolean;
   isApproved: boolean;
+  isPrivate: boolean;
 }
 
 export interface PendingUser {
@@ -18,11 +19,34 @@ export interface PendingUser {
 export const ProfileStore = {
     getByUserId: async (userId: string): Promise<Profile | null> => {
         const result = await pool.query(
-            `SELECT id, email, username, is_admin as "isAdmin", is_approved as "isApproved"
+            `SELECT id, email, username, is_admin as "isAdmin", is_approved as "isApproved", is_private as "isPrivate"
               FROM profiles WHERE id = $1`,
             [userId]
         );
         return result.rows[0] || null;
+    },
+
+    updateProfile: async (userId: string, updates: { username?: string; isPrivate?: boolean }): Promise<void> => {
+        const setClauses: string[] = [];
+        const values: (string | boolean)[] = [];
+        let paramIndex = 1;
+
+        if (updates.username !== undefined) {
+            setClauses.push(`username = $${paramIndex++}`);
+            values.push(updates.username);
+        }
+        if (updates.isPrivate !== undefined) {
+            setClauses.push(`is_private = $${paramIndex++}`);
+            values.push(updates.isPrivate);
+        }
+
+        if (setClauses.length === 0) return;
+
+        values.push(userId);
+        await pool.query(
+            `UPDATE profiles SET ${setClauses.join(', ')} WHERE id = $${paramIndex}`,
+            values
+        );
     },
 
     checkUsernameAvailable: async (username: string): Promise<boolean> => {
