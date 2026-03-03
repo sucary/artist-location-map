@@ -1,4 +1,4 @@
-import { PlusIcon } from '../../Icons/FormIcons';
+import { PlusIcon } from '../../icons/FormIcons';
 
 interface AddArtistButtonProps {
     onClick: () => void;

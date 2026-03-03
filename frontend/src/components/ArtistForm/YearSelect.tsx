@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDownIcon } from './Icons/FormIcons';
+import { ChevronDownIcon } from '../icons/FormIcons';
 
 interface YearSelectProps {
     value?: number;

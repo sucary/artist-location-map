@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import './App.css';
 import { deleteArtist } from './services/api';
 import MapView from './components/Map/MapView';
-import ArtistForm from './components/ArtistForm';
+import ArtistForm from './components/ArtistForm/ArtistForm';
 import ArtistList from './components/ArtistList';
 import AddArtistButton from './components/Map/buttons/AddArtistButton';
 import ViewArtistListButton from './components/Map/buttons/ViewArtistListButton';

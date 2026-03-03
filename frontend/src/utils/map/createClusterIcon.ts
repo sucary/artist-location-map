@@ -1,5 +1,5 @@
 import L from 'leaflet';
-import { CLUSTER_CONFIG } from './clusterConstants';
+import { CLUSTER_CONFIG } from '../../constants/mapCluster';
 
 // Generates the visual cluster icons.
 

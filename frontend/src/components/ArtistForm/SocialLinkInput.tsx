@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import type { ComponentType, SVGProps } from 'react';
-import type { SocialLinkKey } from '../constants/artist';
-import { validateSocialUrl } from '../utils/urlValidation';
+import type { SocialLinkKey } from '../../constants/artist';
+import { validateSocialUrl } from '../../utils/urlValidation';
 
 export interface SocialLinkField {
     key: SocialLinkKey;

@@ -1,12 +1,12 @@
 import { useRef, useCallback, useEffect } from 'react';
 import L from 'leaflet';
-import type { Artist } from '../../../types/artist';
-import { CLUSTER_CONFIG } from './clusterConstants';
-import { generateGeoPositions } from './layout';
+import type { Artist } from '../types/artist';
+import { CLUSTER_CONFIG } from '../constants/mapCluster';
+import { generateGeoPositions } from '../utils/map/layout';
 import {
   setupMarkerPopupEvents,
   type PopupEventHandlers,
-} from './setupMarkerPopup';
+} from '../utils/map/setupMarkerPopup';
 
 interface ExpandedClusterState {
   originalCluster: L.MarkerCluster;

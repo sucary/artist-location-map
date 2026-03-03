@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type L from 'leaflet';
-import type { Artist, LocationView } from '../../../types/artist';
-import { PROGRESSIVE_CONFIG } from './progressiveConstants';
+import type { Artist, LocationView } from '../types/artist';
+import { PROGRESSIVE_CONFIG } from '../constants/mapProgressive';
 
 interface VisibilityResult {
   markers: Artist[];

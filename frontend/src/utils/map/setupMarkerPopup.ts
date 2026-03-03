@@ -1,5 +1,5 @@
 import L from 'leaflet';
-import type { Artist } from '../../../types/artist';
+import type { Artist } from '../../types/artist';
 
 export interface PopupEventHandlers {
   onArtistSelect?: (artist: Artist) => void;

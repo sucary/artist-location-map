@@ -6,7 +6,7 @@ import type { Artist, LocationView } from '../../types/artist';
 import ArtistProfile from '../ArtistProfile';
 import { createArtistMarker, createDotMarker, preloadArtistImages } from '../../utils/mapUtils';
 import { setupMarkerPopupEvents } from './cluster';
-import { useProgressiveVisibility } from './progressive/useProgressiveVisibility';
+import { useProgressiveVisibility } from '../../hooks/useProgressiveVisibility';
 
 interface ArtistProgressiveViewProps {
   artists: Artist[];

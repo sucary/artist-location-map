@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getArtists } from '../services/api';
-import { CloseIcon, SearchIcon, LoaderIcon, MapPinIcon } from './Icons/FormIcons';
+import { CloseIcon, SearchIcon, LoaderIcon, MapPinIcon } from './icons/FormIcons';
 import { getAvatarUrl } from '../utils/cloudinaryUrl';
 import ArtistProfile from './ArtistProfile';
 import type { Artist } from '../types/artist';

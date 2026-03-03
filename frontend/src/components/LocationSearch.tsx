@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { SearchIcon, MapPinIcon, LoaderIcon, CloseIcon } from './Icons/FormIcons';
+import { SearchIcon, MapPinIcon, LoaderIcon, CloseIcon } from './icons/FormIcons';
 import { useLocationSearch } from '../hooks/useLocationSearch';
 import type { SearchResult } from '../services/api';
 

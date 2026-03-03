@@ -1,14 +1,14 @@
 import { useState, useRef } from 'react';
-import { ChevronDownIcon, ArrowDownIcon } from './Icons/FormIcons';
-import { HomeIcon, MusicIcon, YoutubeIcon, InstagramIcon, XIcon } from './Icons/SocialIcons';
-import { LocationSearch } from './LocationSearch';
+import { ChevronDownIcon, ArrowDownIcon } from '../icons/FormIcons';
+import { HomeIcon, MusicIcon, YoutubeIcon, InstagramIcon, XIcon } from '../icons/SocialIcons';
+import { LocationSearch } from '../LocationSearch';
 import SocialLinkInput, { type SocialLinkField } from './SocialLinkInput';
-import ImageCropper, { type CropResult } from './ImageCropper';
+import ImageCropper, { type CropResult } from '../ImageCropper';
 import ArtistFormHeader from './ArtistFormHeader';
 import YearSelect from './YearSelect';
-import { useArtistForm } from '../hooks/useArtistForm';
-import { getAvatarUrl, getProfileUrl } from '../utils/cloudinaryUrl';
-import type { Artist } from '../types/artist';
+import { useArtistForm } from '../../hooks/useArtistForm';
+import { getAvatarUrl, getProfileUrl } from '../../utils/cloudinaryUrl';
+import type { Artist } from '../../types/artist';
 
 
 interface ArtistFormProps {
