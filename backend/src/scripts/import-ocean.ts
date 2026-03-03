@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import pool, { verifyDatabaseConnection } from '../config/database';
 import * as shapefile from 'shapefile';
 import path from 'path';

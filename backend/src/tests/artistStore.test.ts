@@ -1,12 +1,14 @@
 import { describe, it, expect, beforeAll, afterEach, afterAll } from 'vitest';
-import { initTestDb, cleanupTestDb, closeTestDb } from './setup';
-import pool from '../config/database';
+import { initTestDb, cleanupTestDb, closeTestDb, getPool } from './setup';
 
-// Import AFTER setup loads .env.test
-import { ArtistStore } from '../models/artistStore';
+// ArtistStore imported dynamically to avoid hoisting issues
+let ArtistStore: Awaited<typeof import('../models/artistStore')>['ArtistStore'];
 
 beforeAll(async () => {
     await initTestDb();
+    // Dynamic import AFTER env is loaded via initTestDb
+    const module = await import('../models/artistStore');
+    ArtistStore = module.ArtistStore;
 });
 
 afterEach(async () => {
@@ -26,6 +28,7 @@ describe('ArtistStore', () => {
 
     // Create dummy cities
     const createCity = async (name: string, province: string, lat: number, lng: number, osmId: number) => {
+        const pool = await getPool();
         const result = await pool.query(`
             INSERT INTO city_boundaries (name, province, boundary, center, osm_id, osm_type)
             VALUES (

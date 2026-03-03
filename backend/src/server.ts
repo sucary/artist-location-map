@@ -1,16 +1,13 @@
+import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import dotenv from 'dotenv';
 import artistRoutes from './routes/artistRoutes';
 import cityRoutes from './routes/cityRoutes';
 import authRoutes from './routes/authRoutes';
 import { errorHandler } from './middleware/errorHandler';
 import { verifyDatabaseConnection } from './config/database';
-
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;

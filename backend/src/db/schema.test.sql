@@ -131,6 +131,10 @@ CREATE TABLE IF NOT EXISTS artists (
     youtube_url TEXT,
     website_url TEXT,
 
+    -- Year fields
+    debut_year INTEGER,
+    inactive_year INTEGER,
+
     -- Timestamps
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
