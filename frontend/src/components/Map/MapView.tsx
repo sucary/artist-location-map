@@ -2,7 +2,7 @@ import { useEffect, useMemo, useCallback, useState } from 'react';
 import { MapContainer, TileLayer, GeoJSON, ScaleControl, AttributionControl, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { LatLngExpression } from 'leaflet';
-import { getArtists, getArtistsByUsername, getCityById, type SearchResult } from '../../services/api';
+import { getArtists, getArtistsByUsername, getCityById } from '../../services/api';
 import type { Artist, LocationView, SelectionMode } from '../../types/artist';
 import { getDisplayArtists } from '../../utils/mapUtils';
 import MapControls from './buttons/MapControls';
@@ -44,10 +44,15 @@ const MapEmptyClickHandler = ({ onClick }: { onClick: () => void }) => {
     return null;
 };
 
+interface Coordinates {
+    lat: number;
+    lng: number;
+}
+
 interface MapViewProps {
     username?: string;
     selectionMode?: SelectionMode | null;
-    onLocationPick?: ((result: SearchResult | null) => void) | null;
+    onLocationPick?: ((coordinates: Coordinates | null) => void) | null;
     onEditArtist?: (artist: Artist) => void;
     onDeleteArtist?: (artist: Artist) => void;
     onEmptyClick?: () => void;

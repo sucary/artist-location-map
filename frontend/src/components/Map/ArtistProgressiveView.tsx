@@ -90,6 +90,9 @@ const ArtistProgressiveView = ({
     });
   }, [markers, view, map, onArtistSelect, onArtistDeselect, onEditArtist, onDeleteArtist]);
 
+  // Store expandDot function to avoid circular dependency
+  const expandDotRef = useRef<((artist: Artist, dot: L.Marker) => void) | null>(null);
+
   // Function to expand a dot into a full marker with popup
   const expandDot = useCallback((artist: Artist, dot: L.Marker) => {
     // Remove the dot from its layer
@@ -144,7 +147,7 @@ const ArtistProgressiveView = ({
           { icon: createDotMarker() },
         );
         newDot.on('click', () => {
-          expandDot(artist, newDot);
+          expandDotRef.current?.(artist, newDot);
         });
         dotLayerRef.current.addLayer(newDot);
       }
@@ -156,6 +159,11 @@ const ArtistProgressiveView = ({
     marker.addTo(map);
     marker.openPopup();
   }, [view, map, onArtistSelect, onArtistDeselect, onEditArtist, onDeleteArtist]);
+
+  // Keep ref up to date
+  useEffect(() => {
+    expandDotRef.current = expandDot;
+  }, [expandDot]);
 
   // Render dots
   useEffect(() => {
